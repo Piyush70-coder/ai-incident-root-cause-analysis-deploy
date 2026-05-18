@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="bg-slate-950">
+<html lang="en" class="bg-slate-950 h-full">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -85,6 +85,8 @@
         ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
         ::-webkit-scrollbar-thumb:hover { background: #334155; }
 
+        .overscroll-contain { overscroll-behavior: contain; }
+
         .badge-saas { @apply inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider; }
         .status-open { background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); }
         .status-investigating { background: rgba(139, 92, 246, 0.1); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.2); }
@@ -97,26 +99,72 @@
 
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        .safe-text-wrap {
+            overflow-wrap: anywhere;
+            word-break: break-word;
+        }
+        .safe-pre-wrap {
+            white-space: pre-wrap;
+            overflow-wrap: anywhere;
+            word-break: break-word;
+            max-width: 100%;
+        }
+        .scroll-hint {
+            position: relative;
+        }
+        .scroll-hint::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            bottom: 0;
+            width: 20px;
+            background: linear-gradient(to right, transparent, rgba(2, 6, 23, 0.5));
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .scroll-hint.can-scroll::after {
+            opacity: 1;
+        }
+        
+        /* Mobile-first Tiny Screen Stabilizations */
+        @media (max-width: 375px) {
+            .card-saas { padding: 1rem !important; }
+            h1 { font-size: 1.25rem !important; }
+            h2 { font-size: 1.1rem !important; }
+            .btn-saas-primary { padding-left: 1rem; padding-right: 1rem; font-size: 10px; }
+            .sidebar-link { padding-left: 0.75rem; padding-right: 0.75rem; }
+        }
+
+        main { scroll-padding-bottom: 7rem; }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
-<body class="h-screen w-full overflow-hidden text-slate-200">
+<body class="{% if user.is_authenticated %}min-h-[100dvh] h-[100dvh] overflow-hidden overflow-x-hidden{% else %}min-h-screen overflow-x-hidden overflow-y-auto{% endif %} w-full text-slate-200">
     {% if user.is_authenticated %}
-    <div class="flex h-screen w-full bg-slate-950">
-        <aside class="w-72 flex-shrink-0 bg-slate-950 border-r border-slate-900 flex flex-col z-50">
+    <div x-data="{ mobileNavOpen: false }" class="flex min-h-[100dvh] h-[100dvh] w-full bg-slate-950 overflow-x-hidden">
+        <div x-show="mobileNavOpen" x-transition.opacity class="fixed inset-0 bg-slate-950/70 backdrop-blur-sm z-40 lg:hidden" @click="mobileNavOpen = false"></div>
+        <aside class="fixed inset-y-0 left-0 w-72 flex-shrink-0 bg-slate-950 border-r border-slate-900 flex flex-col z-50 transform transition-transform duration-300 ease-out lg:static"
+               :class="mobileNavOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'">
             <div class="p-6">
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
-                        <i data-lucide="zap" class="w-5 h-5 text-white"></i>
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-3">
+                        <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                            <i data-lucide="zap" class="w-5 h-5 text-white"></i>
+                        </div>
+                        <div>
+                            <h1 class="text-xl font-bold tracking-tight text-white leading-none">Sentinel AI</h1>
+                            <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mt-1">Incident Engine</p>
+                        </div>
                     </div>
-                    <div>
-                        <h1 class="text-xl font-bold tracking-tight text-white leading-none">Sentinel AI</h1>
-                        <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mt-1">Incident Engine</p>
-                    </div>
+                    <button type="button" class="lg:hidden p-2 text-slate-400 hover:text-white transition-colors" @click="mobileNavOpen = false" aria-label="Close navigation">
+                        <i data-lucide="x" class="w-5 h-5"></i>
+                    </button>
                 </div>
             </div>
 
-            <nav class="flex-1 px-3 py-6 overflow-y-auto">
+            <nav class="flex-1 px-3 py-6 overflow-y-auto overscroll-contain">
                 <div class="mb-8">
                     <div class="sidebar-section-header">Platform</div>
                     <ul class="space-y-1.5">
@@ -187,33 +235,33 @@
             </div>
         </aside>
 
-        <div class="flex-1 flex flex-col relative min-w-0 bg-slate-950">
+        <div class="flex-1 flex flex-col relative min-w-0 bg-slate-950 overflow-x-hidden">
             <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-600/5 blur-[120px] rounded-full pointer-events-none"></div>
             <div class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-600/5 blur-[100px] rounded-full pointer-events-none"></div>
 
-            <header class="h-20 glass-panel flex-shrink-0 flex items-center justify-between px-8 z-40">
-                <div class="flex items-center gap-4">
-                    <button class="lg:hidden p-2 text-slate-400 hover:text-white transition-colors">
+            <header class="min-h-20 glass-panel flex-shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 px-4 sm:px-6 lg:px-8 py-3 z-30">
+                <div class="flex items-center gap-3 sm:gap-4 min-w-0">
+                    <button type="button" class="lg:hidden p-2 text-slate-400 hover:text-white transition-colors" @click="mobileNavOpen = true" aria-label="Open navigation">
                         <i data-lucide="menu" class="w-6 h-6"></i>
                     </button>
-                    <h2 class="text-xl font-bold text-white tracking-tight">
+                    <h2 class="text-lg sm:text-xl font-bold text-white tracking-tight truncate">
                         {% block page_title %}Dashboard{% endblock %}
                     </h2>
                 </div>
 
-                <div class="flex items-center gap-6">
-                    <form action="{% url 'incident_list' %}" method="get" class="hidden md:flex relative group m-0">
+                <div class="flex items-center gap-3 sm:gap-4 lg:gap-6 w-full sm:w-auto">
+                    <form action="{% url 'incident_list' %}" method="get" class="hidden md:flex relative group m-0 w-full sm:w-auto">
                         <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors"></i>
-                        <input type="text" name="search" value="{{ request.GET.search|default:'' }}" placeholder="Search incidents..." class="bg-slate-900/50 border border-slate-800 rounded-2xl pl-10 pr-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 transition-all w-64">
+                        <input type="text" name="search" value="{{ request.GET.search|default:'' }}" placeholder="Search incidents..." class="bg-slate-900/50 border border-slate-800 rounded-2xl pl-10 pr-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 transition-all w-full sm:w-64">
                     </form>
                     <div class="h-6 w-px bg-slate-800 hidden md:block"></div>
-                    <a href="{% url 'incident_create' %}" class="btn-saas-primary">
+                    <a href="{% url 'incident_create' %}" class="btn-saas-primary whitespace-nowrap w-full sm:w-auto justify-center">
                         <i data-lucide="plus" class="w-4 h-4 mr-2"></i> Report Incident
                     </a>
                 </div>
             </header>
 
-            <main class="flex-1 overflow-y-auto p-6 lg:p-8 relative z-10">
+            <main class="flex-1 overflow-y-auto overflow-x-hidden overscroll-contain p-4 sm:p-6 lg:p-8 relative z-10">
                 {% if messages %}
                 <div class="max-w-7xl mx-auto space-y-3 mb-8">
                     {% for message in messages %}
@@ -234,24 +282,24 @@
         </div>
     </div>
     {% else %}
-    <div class="min-h-screen flex flex-col items-center justify-center p-4 relative bg-slate-950 overflow-hidden w-full">
-        <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none"></div>
-        <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600/10 blur-[120px] rounded-full pointer-events-none"></div>
+    <div class="min-h-[100dvh] sm:min-h-screen flex flex-col items-center justify-start sm:justify-center px-4 py-4 sm:py-8 relative bg-slate-950 overflow-x-hidden overflow-y-auto w-full">
+        <div class="absolute top-1/4 left-1/4 w-64 h-64 sm:w-96 sm:h-96 bg-indigo-600/10 blur-[90px] sm:blur-[120px] rounded-full pointer-events-none"></div>
+        <div class="absolute bottom-1/4 right-1/4 w-64 h-64 sm:w-96 sm:h-96 bg-blue-600/10 blur-[90px] sm:blur-[120px] rounded-full pointer-events-none"></div>
 
-        <div class="w-full max-w-md animate-fade-in relative z-10">
-            <div class="flex flex-col items-center mb-8">
-                <div class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-500/20 mb-5">
-                    <i data-lucide="zap" class="w-8 h-8 text-white"></i>
+        <div class="w-full max-w-md animate-fade-in relative z-10 my-auto py-2 sm:py-0">
+            <div class="flex flex-col items-center mb-5 sm:mb-8">
+                <div class="w-14 h-14 sm:w-16 sm:h-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-500/20 mb-4 sm:mb-5">
+                    <i data-lucide="zap" class="w-7 h-7 sm:w-8 sm:h-8 text-white"></i>
                 </div>
-                <h1 class="text-3xl font-bold text-white tracking-tight">Sentinel AI</h1>
-                <p class="text-slate-400 mt-2 text-sm">Intelligence-driven incident management</p>
+                <h1 class="text-2xl sm:text-3xl font-bold text-white tracking-tight">Sentinel AI</h1>
+                <p class="text-slate-400 mt-1.5 sm:mt-2 text-xs sm:text-sm text-center">Intelligence-driven incident management</p>
             </div>
 
-            <div class="bg-slate-900/50 backdrop-blur-xl rounded-2xl p-8 border border-slate-800 shadow-2xl">
+            <div class="bg-slate-900/50 backdrop-blur-xl rounded-2xl p-4 sm:p-8 border border-slate-800 shadow-2xl w-full max-w-full">
                 {% block public_content %}{% endblock %}
             </div>
 
-            <p class="text-center mt-8 text-slate-500 text-xs">
+            <p class="text-center mt-4 sm:mt-8 text-slate-500 text-xs">
                 &copy; 2026 Sentinel AI Platform. All rights reserved.
             </p>
         </div>
@@ -273,6 +321,57 @@
             Chart.defaults.plugins.tooltip.titleColor = '#f8fafc';
             Chart.defaults.plugins.tooltip.bodyColor = '#cbd5e1';
         }
+        (() => {
+            if (!window.visualViewport) return;
+            const main = document.querySelector('main');
+            if (!main) return;
+
+            const initialViewportHeight = window.visualViewport.height;
+            const keyboardThreshold = 90;
+            const inputSelector = 'input:not([type="hidden"]):not([type="checkbox"]):not([type="radio"]), textarea, select';
+
+            const updateKeyboardInset = () => {
+                const vv = window.visualViewport;
+                const keyboardHeight = Math.max(0, initialViewportHeight - vv.height - vv.offsetTop);
+                if (keyboardHeight > keyboardThreshold) {
+                    main.style.paddingBottom = `${keyboardHeight + 20}px`;
+                } else {
+                    main.style.paddingBottom = '';
+                }
+            };
+
+            window.visualViewport.addEventListener('resize', updateKeyboardInset);
+            window.visualViewport.addEventListener('scroll', updateKeyboardInset);
+
+            document.addEventListener('focusin', (event) => {
+                if (!event.target || !event.target.matches || !event.target.matches(inputSelector)) return;
+                window.setTimeout(() => {
+                    event.target.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+                    updateKeyboardInset();
+                }, 120);
+            });
+
+            document.addEventListener('focusout', () => {
+                window.setTimeout(updateKeyboardInset, 120);
+            });
+
+            // Table scroll hint logic
+            const initScrollHints = () => {
+                const scrollContainers = document.querySelectorAll('.overflow-x-auto');
+                scrollContainers.forEach(container => {
+                    const checkScroll = () => {
+                        if (container.scrollWidth > container.clientWidth) {
+                            container.classList.add('can-scroll');
+                        } else {
+                            container.classList.remove('can-scroll');
+                        }
+                    };
+                    checkScroll();
+                    window.addEventListener('resize', checkScroll);
+                });
+            };
+            initScrollHints();
+        })();
     </script>
     {% block extra_js %}{% endblock %}
 </body>

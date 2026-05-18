@@ -33,20 +33,19 @@
 
 {% block content %}
 <div class="max-w-3xl mx-auto">
-    <div class="mb-8 flex items-center justify-between">
+    <div class="mb-6 sm:mb-8 flex items-start sm:items-center justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-white tracking-tight">Create New Incident</h1>
-            <p class="text-slate-400 text-sm mt-1">Report a new system anomaly and attach logs for AI analysis.</p>
+            <h1 class="text-xl sm:text-2xl font-bold text-white tracking-tight">Create New Incident</h1>
+            <p class="text-slate-400 text-xs sm:text-sm mt-1">Report a new system anomaly and attach logs for AI analysis.</p>
         </div>
         <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
             <i data-lucide="siren" class="w-6 h-6"></i>
         </div>
     </div>
-
-    <form method="post" enctype="multipart/form-data" class="space-y-6 saas-form-group">
+    <form method="post" enctype="multipart/form-data" class="space-y-5 sm:space-y-6 saas-form-group">
         {% csrf_token %}
 
-        <div class="card-saas p-6 lg:p-8 space-y-6 bg-slate-900/20">
+        <div class="card-saas p-4 sm:p-6 lg:p-8 space-y-5 sm:space-y-6 bg-slate-900/20">
             <div class="flex items-center gap-2 mb-2 border-b border-slate-800 pb-4">
                 <i data-lucide="info" class="w-4 h-4 text-slate-400"></i>
                 <h3 class="font-bold text-white text-sm uppercase tracking-widest">Incident Details</h3>
@@ -62,7 +61,7 @@
                 {{ form.description }}
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 <div class="space-y-2">
                     <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-1">Severity *</label>
                     {{ form.severity }}
@@ -74,13 +73,13 @@
             </div>
         </div>
 
-        <div class="card-saas p-6 lg:p-8 space-y-4 bg-slate-900/20">
+        <div class="card-saas p-4 sm:p-6 lg:p-8 space-y-4 bg-slate-900/20">
             <div class="flex items-center gap-2 mb-2 border-b border-slate-800 pb-4">
                 <i data-lucide="file-code-2" class="w-4 h-4 text-slate-400"></i>
                 <h3 class="font-bold text-white text-sm uppercase tracking-widest">Evidence & Logs</h3>
             </div>
 
-            <div class="relative border-2 border-dashed border-slate-700 hover:border-indigo-500/50 rounded-xl p-8 transition-colors bg-slate-900/30 group text-center">
+            <div class="relative border-2 border-dashed border-slate-700 hover:border-indigo-500/50 rounded-xl p-5 sm:p-8 transition-colors bg-slate-900/30 group text-center">
                 <input type="file" name="log_files" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
                 <div class="flex flex-col items-center justify-center space-y-3">
                     <div class="w-12 h-12 rounded-full bg-slate-800 group-hover:bg-indigo-500/20 flex items-center justify-center text-slate-400 group-hover:text-indigo-400 transition-colors">
@@ -94,11 +93,11 @@
             </div>
         </div>
 
-        <div class="flex items-center justify-end gap-4 pt-4">
-            <a href="{% url 'incident_list' %}" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
+        <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center justify-end gap-3 sm:gap-4 pt-2 sm:pt-4">
+            <a href="{% url 'incident_list' %}" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-all text-center">
                 Cancel
             </a>
-            <button type="submit" class="btn-saas-primary shadow-indigo-500/20">
+            <button type="submit" class="btn-saas-primary shadow-indigo-500/20 w-full sm:w-auto">
                 <i data-lucide="save" class="w-4 h-4 mr-2"></i>
                 Submit Incident
             </button>

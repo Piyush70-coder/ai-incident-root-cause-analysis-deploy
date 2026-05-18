@@ -1,17 +1,16 @@
 <div class="card-saas p-6 lg:p-8 mt-6 relative group overflow-hidden border-indigo-500/20 bg-gradient-to-b from-slate-900/50 to-slate-950/50 animate-fade-in shadow-xl">
     <div class="absolute top-0 right-0 w-64 h-64 bg-indigo-500/5 blur-3xl rounded-full -mr-32 -mt-32 pointer-events-none"></div>
 
-    <div class="flex justify-between items-start mb-6 relative z-10 border-b border-slate-800/60 pb-4">
+    <div class="flex justify-between items-start gap-4 mb-6 relative z-10 border-b border-slate-800/60 pb-4">
         <h2 class="text-[11px] font-bold text-indigo-400 uppercase tracking-widest flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 mr-2 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
             Comprehensive Post-Mortem
         </h2>
-        <button onclick="this.closest('.card-saas').remove()" class="text-slate-500 hover:text-rose-400 transition-colors p-1" title="Close">
+        <button onclick="this.closest('.card-saas').remove()" class="shrink-0 text-slate-500 hover:text-rose-400 transition-colors p-1" title="Close">
             <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         </button>
     </div>
-
-    <div class="relative z-10 prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-p:text-slate-300 prose-headings:text-white prose-a:text-indigo-400 prose-strong:text-indigo-300 whitespace-pre-wrap font-mono text-[13px] leading-7">
+    <div class="relative z-10 prose prose-invert prose-sm max-w-none prose-p:leading-relaxed prose-p:text-slate-300 prose-headings:text-white prose-a:text-indigo-400 prose-strong:text-indigo-300 whitespace-pre-wrap break-words overflow-x-auto font-mono text-[12px] sm:text-[13px] leading-6 sm:leading-7">
         {{ report|safe }}
     </div>
 

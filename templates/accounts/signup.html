@@ -3,13 +3,13 @@
 {% block title %}Create Account | Sentinel AI{% endblock %}
 
 {% block public_content %}
-<div class="w-full">
-    <div class="mb-8">
-        <h2 class="text-2xl font-bold text-white text-center tracking-tight">Request Access</h2>
-        <p class="text-slate-400 text-sm text-center mt-1">Join the next-gen incident intelligence platform</p>
+<div class="w-full max-w-full overflow-x-hidden">
+    <div class="mb-5 sm:mb-8">
+        <h2 class="text-xl sm:text-2xl font-bold text-white text-center tracking-tight">Request Access</h2>
+        <p class="text-slate-400 text-xs sm:text-sm text-center mt-1">Join the next-gen incident intelligence platform</p>
     </div>
 
-    <form class="space-y-5" method="post">
+    <form class="space-y-4 sm:space-y-5" method="post">
         {% csrf_token %}
 
         {% if form.errors %}
@@ -24,12 +24,12 @@
         </div>
         {% endif %}
 
-        <div class="space-y-5">
+        <div class="space-y-4 sm:space-y-5">
             <div class="flex flex-col gap-1.5">
                 <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-1">Username</label>
                 <div class="relative group">
                     <i data-lucide="user" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors"></i>
-                    <input type="text" name="username" required class="w-full bg-slate-900/50 border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="johndoe">
+                    <input type="text" name="username" required class="w-full bg-slate-900/50 border border-slate-800 rounded-xl pl-11 pr-4 py-2.5 sm:py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="johndoe">
                 </div>
             </div>
 
@@ -37,32 +37,32 @@
                 <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-1">Work Email</label>
                 <div class="relative group">
                     <i data-lucide="mail" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors"></i>
-                    <input type="email" name="email" required class="w-full bg-slate-900/50 border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="john@company.com">
+                    <input type="email" name="email" required class="w-full bg-slate-900/50 border border-slate-800 rounded-xl pl-11 pr-4 py-2.5 sm:py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="john@company.com">
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5">
                 <div class="flex flex-col gap-1.5">
                     <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-1">Password</label>
-                    <input type="password" name="password1" required class="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="••••••••">
+                    <input type="password" name="password1" required class="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-2.5 sm:py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="••••••••">
                 </div>
                 <div class="flex flex-col gap-1.5">
                     <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-1">Confirm</label>
-                    <input type="password" name="password2" required class="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="••••••••">
+                    <input type="password" name="password2" required class="w-full bg-slate-900/50 border border-slate-800 rounded-xl px-4 py-2.5 sm:py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="••••••••">
                 </div>
             </div>
 
-            <div class="pt-6 mt-2 space-y-5 relative">
+            <div class="pt-5 sm:pt-6 mt-1 sm:mt-2 space-y-4 sm:space-y-5 relative">
                 <div class="absolute -top-3 left-0 right-0 flex items-center justify-center">
                     <div class="absolute w-full border-t border-slate-800/80"></div>
                     <span class="relative bg-slate-950 px-3 text-[10px] font-bold text-slate-500 uppercase tracking-widest rounded-full border border-slate-800">Organization Setup</span>
                 </div>
 
-                <div class="flex flex-col gap-1.5 pt-2">
+                <div class="flex flex-col gap-1.5 pt-1 sm:pt-2">
                     <label class="text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-1">New Org Name</label>
                     <div class="relative group">
                         <i data-lucide="building" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors"></i>
-                        <input type="text" name="company_name" class="w-full bg-slate-900/50 border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="Acme Corp">
+                        <input type="text" name="company_name" class="w-full bg-slate-900/50 border border-slate-800 rounded-xl pl-11 pr-4 py-2.5 sm:py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="Acme Corp">
                     </div>
                 </div>
 
@@ -72,20 +72,20 @@
                     </div>
                     <div class="relative group">
                         <i data-lucide="hash" class="w-4 h-4 absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors"></i>
-                        <input type="text" name="company_slug" class="w-full bg-slate-900/50 border border-slate-800 rounded-xl pl-11 pr-4 py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="acme-corp">
+                        <input type="text" name="company_slug" class="w-full bg-slate-900/50 border border-slate-800 rounded-xl pl-11 pr-4 py-2.5 sm:py-3 text-sm text-white placeholder-slate-600 focus:outline-none focus:border-indigo-500/50 focus:ring-2 focus:ring-indigo-500/20 transition-all" placeholder="acme-corp">
                     </div>
                 </div>
             </div>
         </div>
 
-        <button type="submit" class="btn-saas-primary w-full py-3.5 mt-8 shadow-indigo-500/20">
+        <button type="submit" class="btn-saas-primary w-full py-3 sm:py-3.5 mt-6 sm:mt-8 shadow-indigo-500/20">
             Initialize Account
             <i data-lucide="zap" class="w-4 h-4 ml-2"></i>
         </button>
     </form>
 
-    <div class="pt-6 mt-6 border-t border-slate-800/50 text-center">
-        <p class="text-sm text-slate-400">
+    <div class="pt-5 sm:pt-6 mt-5 sm:mt-6 border-t border-slate-800/50 text-center">
+        <p class="text-xs sm:text-sm text-slate-400">
             Already registered?
             <a href="{% url 'login' %}" class="font-bold text-indigo-400 hover:text-indigo-300 transition-colors ml-1">Sign In</a>
         </p>
