@@ -6,6 +6,8 @@ services:
     buildCommand: ./build.sh
     startCommand: ./start.sh
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
       - key: DATABASE_URL
         sync: false
       - key: REDIS_URL
@@ -26,7 +28,9 @@ services:
       - key: WEB_CONCURRENCY
         value: "1"
       - key: RUN_EMBEDDED_CELERY
-        value: "false"
+        value: "true"
+      - key: CELERY_WORKER_CONCURRENCY
+        value: "1"
       - key: ENABLE_SEMANTIC_RETRIEVAL
         value: "false"
       - key: ENABLE_LOCAL_AI_FALLBACK
@@ -35,33 +39,6 @@ services:
         value: "true"
       - key: CORS_ALLOWED_ORIGINS
         value: ""
-      - key: GROQ_API_KEY
-        sync: false
-
-  - type: worker
-    name: ai-incident-platform-worker
-    runtime: python
-    plan: starter
-    buildCommand: ./build.sh
-    startCommand: celery -A incident_management worker -l info --pool=solo --concurrency=1 --without-gossip --without-mingle --without-heartbeat
-    envVars:
-      - key: DATABASE_URL
-        sync: false
-      - key: REDIS_URL
-        fromService:
-          type: keyvalue
-          name: ai-incident-platform-redis
-          property: connectionString
-      - key: SECRET_KEY
-        sync: false
-      - key: DEBUG
-        value: "false"
-      - key: REQUIREMENTS_FILE
-        value: "requirements.render-free.txt"
-      - key: ENABLE_SEMANTIC_RETRIEVAL
-        value: "false"
-      - key: ENABLE_LOCAL_AI_FALLBACK
-        value: "false"
       - key: GROQ_API_KEY
         sync: false
 

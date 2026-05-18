@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -o errexit
 
+python --version
 python manage.py migrate --noinput
 
 if [ "${RUN_EMBEDDED_CELERY:-false}" = "true" ]; then
