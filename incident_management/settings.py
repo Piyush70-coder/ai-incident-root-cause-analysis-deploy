@@ -1,9 +1,10 @@
-"""
+x"""
 Django settings for incident_management project.
 Optimized for Render + Neon PostgreSQL with Celery/Redis support.
 """
 
 import os
+import ssl
 from pathlib import Path
 
 import dj_database_url
@@ -167,9 +168,21 @@ CACHES = {
     }
 }
 
+# SSL Configuration for Cache (rediss://)
+if CACHES["default"]["LOCATION"].startswith("rediss://"):
+    CACHES["default"]["OPTIONS"] = {
+        "ssl_cert_reqs": ssl.CERT_NONE,
+    }
+
 CELERY_BROKER_URL = (os.getenv("CELERY_BROKER_URL") or REDIS_URL).strip()
 CELERY_RESULT_BACKEND = (os.getenv("CELERY_RESULT_BACKEND") or REDIS_URL).strip()
-CELERY_TASK_ALWAYS_EAGER = env_bool("CELERY_TASK_ALWAYS_EAGER", False)
+
+# SSL Configuration for Upstash Redis (rediss://)
+if CELERY_BROKER_URL.startswith("rediss://"):
+    CELERY_BROKER_USE_SSL = {"ssl_cert_reqs": ssl.CERT_NONE}
+    CELERY_REDIS_BACKEND_USE_SSL = {"ssl_cert_reqs": ssl.CERT_NONE}
+
+CELERY_TASK_ALWAYS_EAGER = env_bool("CELERY_TASK_ALWAYS_EAGER", True)
 CELERY_TASK_EAGER_PROPAGATES = DEBUG
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
