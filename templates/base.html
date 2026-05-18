@@ -1,358 +1,279 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="bg-slate-950">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Incident Management{% endblock %}</title>
-    
-    <!-- Tailwind CSS -->
+    <title>{% block title %}Sentinel AI | Incident Intelligence{% endblock %}</title>
+
     <script src="https://cdn.tailwindcss.com"></script>
-    
-    <!-- Google Fonts -->
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-    
-    <!-- Alpine.js -->
+
+    <script src="https://unpkg.com/lucide@latest"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    
-    <!-- HTMX -->
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    
-    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    
+
     <style>
         :root {
-            --bg-primary: #1a1d2e;
-            --bg-secondary: #22263a;
-            --accent: #6366f1;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --error: #ef4444;
-            --info: #3b82f6;
-            --text-primary: #f9fafb;
-            --text-secondary: #9ca3af;
+            --bg-dark: #020617;
+            --bg-card: #0f172a;
+            --border-muted: #1e293b;
+            --text-muted: #94a3b8;
         }
-        
-        * {
-            font-family: 'Inter', sans-serif;
-        }
-        
         body {
-            background-color: var(--bg-primary);
-            color: var(--text-primary);
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-dark);
+            color: #f8fafc;
+            -webkit-font-smoothing: antialiased;
         }
-        
-        code, pre, .log-content {
-            font-family: 'JetBrains Mono', monospace;
+        code, pre, .font-mono { font-family: 'JetBrains Mono', monospace; }
+
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.7);
+            backdrop-filter: blur(16px);
+            border-bottom: 1px solid rgba(30, 41, 59, 0.8);
         }
-        
-        .sidebar {
-            background-color: var(--bg-secondary);
-            min-height: 100vh;
+
+        .card-saas {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-muted);
+            border-radius: 1rem;
+            transition: all 0.3s ease;
         }
-        
-        .card {
-            background-color: var(--bg-secondary);
-            border-radius: 0.5rem;
-            padding: 1.5rem;
-            box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+        .card-saas:hover {
+            border-color: rgba(99, 102, 241, 0.4);
+            box-shadow: 0 10px 30px -10px rgba(99, 102, 241, 0.15);
+            transform: translateY(-2px);
         }
-        
-        .btn-primary {
-            background-color: var(--accent);
-            color: white;
-            padding: 0.5rem 1rem;
-            border-radius: 0.375rem;
-            font-weight: 500;
-            transition: all 0.2s;
+
+        .btn-saas-primary {
+            @apply flex items-center justify-center px-6 py-2.5 rounded-full font-bold text-xs uppercase tracking-widest text-white transition-all duration-300;
+            background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        
-        .btn-primary:hover {
-            background-color: #4f46e5;
+        .btn-saas-primary:hover {
+            @apply brightness-110 -translate-y-0.5 shadow-xl;
+            box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4);
+            letter-spacing: 0.1em;
         }
-        
-        .btn-secondary {
-            background-color: #374151;
-            color: var(--text-primary);
-            padding: 0.5rem 1rem;
-            border-radius: 0.375rem;
-            font-weight: 500;
+
+        /* SideBar Link Styles Updated */
+        .sidebar-link {
+            @apply flex items-center px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 group;
+            color: var(--text-muted);
+            letter-spacing: -0.01em;
         }
-        
-        .btn-secondary:hover {
-            background-color: #4b5563;
+        .sidebar-link:hover {
+            @apply bg-indigo-500/5 text-indigo-400;
+            transform: translateX(6px);
         }
-        
-        .badge-critical {
-            background-color: var(--error);
-            color: white;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-            font-size: 0.75rem;
-            font-weight: 600;
+        .sidebar-link.active {
+            @apply bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shadow-[0_4px_20px_rgba(99,102,241,0.1)];
         }
-        
-        .badge-high {
-            background-color: #f97316;
-            color: white;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-            font-size: 0.75rem;
-            font-weight: 600;
+        .sidebar-link.active i { @apply text-indigo-400; }
+
+        .sidebar-section-header {
+            @apply text-[10px] font-bold text-slate-500 uppercase tracking-widest px-4 mb-3;
         }
-        
-        .badge-medium {
-            background-color: var(--warning);
-            color: white;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-        
-        .badge-low {
-            background-color: var(--info);
-            color: white;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-        
-        .status-badge-new { background-color: #3b82f6; }
-        .status-badge-investigating { background-color: #8b5cf6; }
-        .status-badge-analyzing { background-color: #ec4899; }
-        .status-badge-root_cause_found { background-color: #f59e0b; }
-        .status-badge-mitigating { background-color: #10b981; }
-        .status-badge-resolved { background-color: #10b981; }
-        .status-badge-closed { background-color: #6b7280; }
-        
-        .status-badge {
-            color: white;
-            padding: 0.25rem 0.5rem;
-            border-radius: 0.25rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: capitalize;
-        }
-        
-        .table-dark {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        .table-dark th,
-        .table-dark td {
-            padding: 0.75rem;
-            text-align: left;
-            border-bottom: 1px solid #374151;
-        }
-        
-        .table-dark th {
-            background-color: #1f2937;
-            font-weight: 600;
-            color: var(--text-secondary);
-        }
-        
-        .table-dark tr:hover {
-            background-color: #1f2937;
-        }
-        
-        .form-control {
-            background-color: #1f2937;
-            border: 1px solid #374151;
-            color: var(--text-primary);
-            padding: 0.5rem;
-            border-radius: 0.375rem;
-            width: 100%;
-        }
-        
-        .form-control:focus {
-            outline: none;
-            border-color: var(--accent);
-            ring: 2px;
-            ring-color: var(--accent);
-        }
-        
-        .form-select {
-            background-color: #1f2937;
-            border: 1px solid #374151;
-            color: var(--text-primary);
-            padding: 0.5rem;
-            border-radius: 0.375rem;
-            width: 100%;
-        }
-        
-        .notification-toast {
-            position: fixed;
-            top: 1rem;
-            right: 1rem;
-            z-index: 1000;
-            animation: slideIn 0.3s ease-out;
-        }
-        
-        @keyframes slideIn {
-            from {
-                transform: translateX(100%);
-                opacity: 0;
-            }
-            to {
-                transform: translateX(0);
-                opacity: 1;
-            }
-        }
-        
-        .skeleton {
-            background: linear-gradient(90deg, #1f2937 25%, #374151 50%, #1f2937 75%);
-            background-size: 200% 100%;
-            animation: loading 1.5s ease-in-out infinite;
-        }
-        
-        @keyframes loading {
-            0% { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
-        }
-        
-        /* Constrain SVG icons to prevent oversized rendering */
-        .sidebar svg,
-        .card svg {
-            width: 1.25rem;  /* 20px */
-            height: 1.25rem; /* 20px */
-            flex-shrink: 0;
-        }
-        
-        /* Chart sizing */
-        .chart-container {
-            height: 300px;
-            position: relative;
-        }
-        .chart-container canvas {
-            width: 100% !important;
-            height: 100% !important;
-            display: block;
-        }
+
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+        .badge-saas { @apply inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold uppercase tracking-wider; }
+        .status-open { background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); }
+        .status-investigating { background: rgba(139, 92, 246, 0.1); color: #a78bfa; border: 1px solid rgba(139, 92, 246, 0.2); }
+        .status-resolved { background: rgba(16, 185, 129, 0.1); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.2); }
+        .status-closed { background: rgba(148, 163, 184, 0.1); color: #94a3b8; border: 1px solid rgba(148, 163, 184, 0.2); }
+        .severity-critical { background: rgba(239, 68, 68, 0.1); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .severity-high { background: rgba(249, 115, 22, 0.1); color: #fb923c; border: 1px solid rgba(249, 115, 22, 0.2); }
+        .severity-medium { background: rgba(245, 158, 11, 0.1); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.2); }
+        .severity-low { background: rgba(59, 130, 246, 0.1); color: #60a5fa; border: 1px solid rgba(59, 130, 246, 0.2); }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
     </style>
-    
     {% block extra_css %}{% endblock %}
 </head>
-<body class="bg-[#1a1d2e] text-gray-100">
+<body class="h-screen w-full overflow-hidden text-slate-200">
     {% if user.is_authenticated %}
-    <div class="flex">
-        <!-- Sidebar -->
-        <aside class="sidebar w-64 fixed left-0 top-0 h-screen overflow-y-auto">
-            <div class="p-4">
-                <h1 class="text-xl font-bold text-indigo-400 mb-6">Incident Manager</h1>
-                
-                <nav class="space-y-1">
-                    <a href="{% url 'dashboard' %}" class="flex items-center px-4 py-2 rounded-lg hover:bg-gray-700 {% if request.resolver_match.url_name == 'dashboard' %}bg-gray-700 text-indigo-400{% endif %}">
-                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path>
-                        </svg>
-                        Dashboard
-                    </a>
-                    
-                    <a href="{% url 'incident_list' %}" class="flex items-center px-4 py-2 rounded-lg hover:bg-gray-700 {% if 'incident' in request.resolver_match.url_name %}bg-gray-700 text-indigo-400{% endif %}">
-                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
-                        </svg>
-                        Incidents
-                    </a>
-                    
-                    <a href="{% url 'log_explorer' %}" class="flex items-center px-4 py-2 rounded-lg hover:bg-gray-700 {% if 'log' in request.resolver_match.url_name %}bg-gray-700 text-indigo-400{% endif %}">
-                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
-                        </svg>
-                        Log Explorer
-                    </a>
-                    
-                    <a href="{% url 'past_incidents' %}" class="flex items-center px-4 py-2 rounded-lg hover:bg-gray-700 {% if 'past' in request.resolver_match.url_name %}bg-gray-700 text-indigo-400{% endif %}">
-                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        Past Incidents
-                    </a>
-                    
-                    <a href="{% url 'notifications' %}" class="flex items-center px-4 py-2 rounded-lg hover:bg-gray-700 relative">
-                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path>
-                        </svg>
-                        Notifications
-                        {% if unread_notifications_count > 0 %}
-                        <span class="ml-auto bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">{{ unread_notifications_count }}</span>
-                        {% endif %}
-                    </a>
-                    
-                    <a href="{% url 'profile' %}" class="flex items-center px-4 py-2 rounded-lg hover:bg-gray-700">
-                        <svg class="w-5 h-5 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-                        </svg>
-                        Settings
-                    </a>
-                </nav>
+    <div class="flex h-screen w-full bg-slate-950">
+        <aside class="w-72 flex-shrink-0 bg-slate-950 border-r border-slate-900 flex flex-col z-50">
+            <div class="p-6">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 bg-indigo-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                        <i data-lucide="zap" class="w-5 h-5 text-white"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-xl font-bold tracking-tight text-white leading-none">Sentinel AI</h1>
+                        <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mt-1">Incident Engine</p>
+                    </div>
+                </div>
             </div>
-            
-            <div class="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-700">
-                <div class="flex items-center">
-                    {% if user.avatar %}
-                    <img src="{{ user.avatar.url }}" alt="{{ user.username }}" class="w-8 h-8 rounded-full mr-3">
-                    {% else %}
-                    <div class="w-8 h-8 rounded-full bg-indigo-500 flex items-center justify-center mr-3">
+
+            <nav class="flex-1 px-3 py-6 overflow-y-auto">
+                <div class="mb-8">
+                    <div class="sidebar-section-header">Platform</div>
+                    <ul class="space-y-1.5">
+                        <li>
+                            <a href="{% url 'dashboard' %}" class="sidebar-link {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                                <i data-lucide="layout-grid" class="w-5 h-5 mr-3 transition-colors group-hover:text-indigo-400"></i> Dashboard
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'incident_list' %}" class="sidebar-link {% if request.resolver_match.url_name == 'incident_list' or request.resolver_match.url_name == 'incident_detail' %}active{% endif %}">
+                                <i data-lucide="alert-octagon" class="w-5 h-5 mr-3 transition-colors group-hover:text-indigo-400"></i> Incidents
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'log_explorer' %}" class="sidebar-link {% if request.resolver_match.url_name == 'log_explorer' %}active{% endif %}">
+                                <i data-lucide="terminal" class="w-5 h-5 mr-3 transition-colors group-hover:text-indigo-400"></i> Log Explorer
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'notifications' %}" class="sidebar-link {% if request.resolver_match.url_name == 'notifications' %}active{% endif %} relative">
+                                <i data-lucide="bell" class="w-5 h-5 mr-3 transition-colors group-hover:text-indigo-400"></i> Notifications
+                                {% if unread_notifications_count %}
+                                <span class="absolute top-3 right-4 w-2 h-2 bg-indigo-500 rounded-full shadow-[0_0_8px_rgba(99,102,241,0.6)] animate-pulse"></span>
+                                {% endif %}
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+
+                <div>
+                    <div class="sidebar-section-header">Configuration</div>
+                    <ul class="space-y-1.5">
+                        <li>
+                            <a href="{% url 'company_settings' %}" class="sidebar-link {% if request.resolver_match.url_name == 'company_settings' %}active{% endif %}">
+                                <i data-lucide="building-2" class="w-5 h-5 mr-3 transition-colors group-hover:text-indigo-400"></i> Organization
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'company_users' %}" class="sidebar-link {% if request.resolver_match.url_name == 'company_users' %}active{% endif %}">
+                                <i data-lucide="users" class="w-5 h-5 mr-3 transition-colors group-hover:text-indigo-400"></i> Team
+                            </a>
+                        </li>
+                        <li>
+                            <a href="{% url 'profile' %}" class="sidebar-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+                                <i data-lucide="user-cog" class="w-5 h-5 mr-3 transition-colors group-hover:text-indigo-400"></i> Profile
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <div class="p-4 border-t border-slate-900">
+                <div class="bg-slate-900/40 rounded-xl p-3 flex items-center gap-3 border border-slate-800/50">
+                    <div class="w-9 h-9 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-sm">
                         {{ user.username|first|upper }}
                     </div>
-                    {% endif %}
-                    <div class="flex-1">
-                        <div class="text-sm font-medium">{{ user.username }}</div>
-                        <div class="text-xs text-gray-400">{{ user.get_role_display }}</div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-white truncate">{{ user.username }}</p>
+                        <p class="text-[11px] text-slate-400 truncate">{{ user.email }}</p>
                     </div>
+                    <form action="{% url 'logout' %}" method="post" class="shrink-0 m-0">
+                        {% csrf_token %}
+                        <button type="submit" class="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors">
+                            <i data-lucide="log-out" class="w-4 h-4"></i>
+                        </button>
+                    </form>
                 </div>
             </div>
         </aside>
-        
-        <!-- Main Content -->
-        <main class="flex-1 ml-64">
-            <!-- Top Bar -->
-            <header class="bg-[#22263a] border-b border-gray-700 px-6 py-4 flex items-center justify-between">
-                <div>
-                    <h2 class="text-xl font-semibold">{% block page_title %}Dashboard{% endblock %}</h2>
+
+        <div class="flex-1 flex flex-col relative min-w-0 bg-slate-950">
+            <div class="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-600/5 blur-[120px] rounded-full pointer-events-none"></div>
+            <div class="absolute bottom-0 left-0 w-[400px] h-[400px] bg-blue-600/5 blur-[100px] rounded-full pointer-events-none"></div>
+
+            <header class="h-20 glass-panel flex-shrink-0 flex items-center justify-between px-8 z-40">
+                <div class="flex items-center gap-4">
+                    <button class="lg:hidden p-2 text-slate-400 hover:text-white transition-colors">
+                        <i data-lucide="menu" class="w-6 h-6"></i>
+                    </button>
+                    <h2 class="text-xl font-bold text-white tracking-tight">
+                        {% block page_title %}Dashboard{% endblock %}
+                    </h2>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <a href="{% url 'incident_create' %}" class="btn-primary flex items-center">
-                        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                        </svg>
-                        New Incident
-                    </a>
-                    <form action="{% url 'logout' %}" method="post" class="inline">
-                        {% csrf_token %}
-                        <button type="submit" class="text-gray-400 hover:text-white bg-transparent border-0 cursor-pointer p-0 text-base">Logout</button>
+
+                <div class="flex items-center gap-6">
+                    <form action="{% url 'incident_list' %}" method="get" class="hidden md:flex relative group m-0">
+                        <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-indigo-400 transition-colors"></i>
+                        <input type="text" name="search" value="{{ request.GET.search|default:'' }}" placeholder="Search incidents..." class="bg-slate-900/50 border border-slate-800 rounded-2xl pl-10 pr-4 py-2 text-sm text-slate-200 focus:outline-none focus:border-indigo-500/50 focus:ring-4 focus:ring-indigo-500/10 transition-all w-64">
                     </form>
+                    <div class="h-6 w-px bg-slate-800 hidden md:block"></div>
+                    <a href="{% url 'incident_create' %}" class="btn-saas-primary">
+                        <i data-lucide="plus" class="w-4 h-4 mr-2"></i> Report Incident
+                    </a>
                 </div>
             </header>
-            
-            <!-- Messages -->
-            {% if messages %}
-            <div class="px-6 pt-4">
-                {% for message in messages %}
-                <div class="bg-{% if message.tags == 'error' %}red-900{% elif message.tags == 'success' %}green-900{% else %}blue-900{% endif %} text-white px-4 py-3 rounded mb-2">
-                    {{ message }}
+
+            <main class="flex-1 overflow-y-auto p-6 lg:p-8 relative z-10">
+                {% if messages %}
+                <div class="max-w-7xl mx-auto space-y-3 mb-8">
+                    {% for message in messages %}
+                    <div class="animate-fade-in p-4 rounded-xl border flex items-center gap-3 {% if message.tags == 'success' %}bg-emerald-500/10 border-emerald-500/20 text-emerald-400{% elif message.tags == 'error' %}bg-red-500/10 border-red-500/20 text-red-400{% else %}bg-indigo-500/10 border-indigo-500/20 text-indigo-400{% endif %}">
+                        {% if message.tags == 'success' %}<i data-lucide="check-circle-2" class="w-5 h-5"></i>
+                        {% elif message.tags == 'error' %}<i data-lucide="alert-circle" class="w-5 h-5"></i>
+                        {% else %}<i data-lucide="info" class="w-5 h-5"></i>{% endif %}
+                        <p class="text-sm font-medium">{{ message }}</p>
+                    </div>
+                    {% endfor %}
                 </div>
-                {% endfor %}
-            </div>
-            {% endif %}
-            
-            <!-- Page Content -->
-            <div class="p-6">
-                {% block content %}{% endblock %}
-            </div>
-        </main>
+                {% endif %}
+
+                <div class="max-w-7xl mx-auto animate-fade-in pb-10">
+                    {% block content %}{% endblock %}
+                </div>
+            </main>
+        </div>
     </div>
     {% else %}
-        {% block content_guest %}{% endblock %}
+    <div class="min-h-screen flex flex-col items-center justify-center p-4 relative bg-slate-950 overflow-hidden w-full">
+        <div class="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/10 blur-[120px] rounded-full pointer-events-none"></div>
+        <div class="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600/10 blur-[120px] rounded-full pointer-events-none"></div>
+
+        <div class="w-full max-w-md animate-fade-in relative z-10">
+            <div class="flex flex-col items-center mb-8">
+                <div class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-500/20 mb-5">
+                    <i data-lucide="zap" class="w-8 h-8 text-white"></i>
+                </div>
+                <h1 class="text-3xl font-bold text-white tracking-tight">Sentinel AI</h1>
+                <p class="text-slate-400 mt-2 text-sm">Intelligence-driven incident management</p>
+            </div>
+
+            <div class="bg-slate-900/50 backdrop-blur-xl rounded-2xl p-8 border border-slate-800 shadow-2xl">
+                {% block public_content %}{% endblock %}
+            </div>
+
+            <p class="text-center mt-8 text-slate-500 text-xs">
+                &copy; 2026 Sentinel AI Platform. All rights reserved.
+            </p>
+        </div>
+    </div>
     {% endif %}
-    
+
+    <script>
+        lucide.createIcons();
+        document.body.addEventListener('htmx:afterSwap', function(evt) { lucide.createIcons(); });
+
+        if (typeof Chart !== 'undefined') {
+            Chart.defaults.color = '#64748b';
+            Chart.defaults.font.family = "'Inter', sans-serif";
+            Chart.defaults.plugins.tooltip.backgroundColor = '#0f172a';
+            Chart.defaults.plugins.tooltip.borderColor = '#1e293b';
+            Chart.defaults.plugins.tooltip.borderWidth = 1;
+            Chart.defaults.plugins.tooltip.padding = 12;
+            Chart.defaults.plugins.tooltip.cornerRadius = 8;
+            Chart.defaults.plugins.tooltip.titleColor = '#f8fafc';
+            Chart.defaults.plugins.tooltip.bodyColor = '#cbd5e1';
+        }
+    </script>
     {% block extra_js %}{% endblock %}
 </body>
 </html>

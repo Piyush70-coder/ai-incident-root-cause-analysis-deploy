@@ -1,8 +1,7 @@
-from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
-import re
-
-# We reuse the model if needed, but for postmortems we rely on templating + RCA data
-# to ensure high quality and consistency.
+"""
+Postmortem generation stays intentionally lightweight for production.
+We already have the RCA payload, so this service should not import or boot models.
+"""
 
 def generate_postmortem(context: str, root_cause: str = None, explanation: str = None) -> str:
     if not root_cause:

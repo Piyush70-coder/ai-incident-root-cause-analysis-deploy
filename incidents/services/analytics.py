@@ -62,6 +62,27 @@ class AnalyticsService:
         metrics['status_distribution'] = list(
             incidents.values('status').annotate(count=Count('id')).order_by('-count')
         )
+
+        # AI vs Manual Stats
+        ai_analyzed = incidents.filter(
+            analysis__ai_status='completed',
+            analysis__confidence_score__gte=0.7
+        ).count()
+        manual_investigating = incidents.filter(status='investigating').count()
+        other_incidents = incidents.exclude(
+            id__in=incidents.filter(analysis__ai_status='completed', analysis__confidence_score__gte=0.7).values_list('id', flat=True)
+        ).exclude(status='investigating').count()
+
+        metrics['ai_vs_manual'] = {
+            'ai_auto_analyzed': ai_analyzed,
+            'manual_investigating': manual_investigating,
+            'other': other_incidents
+        }
+
+        # Category distribution
+        metrics['category_distribution'] = list(
+            incidents.values('category').annotate(count=Count('id')).order_by('-count')
+        )
         
         # Top affected services
         all_services = []
@@ -69,7 +90,7 @@ class AnalyticsService:
             all_services.extend(incident.affected_services or [])
         from collections import Counter
         service_counts = Counter(all_services)
-        metrics['top_services'] = dict(service_counts.most_common(10))
+        metrics['top_services'] = dict(service_counts.most_common(15))
         
         cache.set(cache_key, metrics, AnalyticsService.CACHE_TIMEOUT)
         return metrics
@@ -90,7 +111,34 @@ class AnalyticsService:
             select={'day': "date(created_at)"}
         ).values('day').annotate(count=Count('id')).order_by('day')
         
-        data = list(incidents)
+        # Also get MTTR trend for the same period
+        resolved = Incident.objects.filter(
+            company=company,
+            resolved_at__isnull=False,
+            created_at__gte=start_date
+        ).annotate(
+            resolution_time_hours=ExpressionWrapper(
+                (F('resolved_at') - F('created_at')),
+                output_field=DurationField()
+            )
+        ).extra(
+            select={'day': "date(created_at)"}
+        ).values('day').annotate(
+            avg_mttr=Avg(F('resolution_time_hours'))
+        ).order_by('day')
+
+        # Convert MTTR to hours
+        mttr_map = {r['day']: r['avg_mttr'].total_seconds() / 3600 if r['avg_mttr'] else 0 for r in resolved}
+        
+        data = []
+        for inc in incidents:
+            day = inc['day']
+            data.append({
+                'day': day,
+                'count': inc['count'],
+                'mttr': mttr_map.get(day, 0)
+            })
+
         cache.set(cache_key, data, AnalyticsService.CACHE_TIMEOUT)
         return data
     

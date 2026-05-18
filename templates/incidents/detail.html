@@ -1,180 +1,338 @@
 {% extends 'base.html' %}
 {% load humanize %}
 
-{% block page_title %}{{ incident.title }}{% endblock %}
+{% block page_title %}Incident Analysis #{{ incident.incident_id|default:incident.id|slice:":8" }}{% endblock %}
 
 {% block content %}
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-    <!-- ================= MAIN ================= -->
-    <div class="lg:col-span-2 space-y-6">
-
-        <!-- ================= INCIDENT SUMMARY ================= -->
-        <div class="card">
-            <div class="flex justify-between items-start mb-4">
-                <div>
-                    <h1 class="text-2xl font-bold mb-2">{{ incident.title }}</h1>
-                    <div class="flex items-center space-x-3">
-                        <span class="badge-{{ incident.severity }}">
-                            {{ incident.get_severity_display }}
-                        </span>
-                        <span class="status-badge status-badge-{{ incident.status }}">
-                            {{ incident.get_status_display }}
-                        </span>
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+    <div class="col-span-1 lg:col-span-5 space-y-8 flex flex-col">
+        <div class="card-saas overflow-hidden flex flex-col h-[500px] lg:h-[750px] shadow-xl shadow-slate-950/50">
+            <div class="p-5 border-b border-slate-900 flex items-center justify-between bg-slate-900/40">
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20 shrink-0">
+                        <i data-lucide="terminal" class="w-4 h-4"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-sm font-bold text-white uppercase tracking-wider">Raw Evidence</h3>
+                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-widest mt-0.5">Log Stream Analysis</p>
                     </div>
                 </div>
-                <span class="font-mono text-sm text-gray-400">
-                    #{{ incident.incident_id }}
-                </span>
+                <div class="flex items-center gap-2 shrink-0">
+                    <span class="px-2 py-0.5 rounded-md bg-slate-950 border border-slate-800 text-[10px] font-mono text-emerald-500 flex items-center gap-1.5">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span> LIVE
+                    </span>
+                </div>
             </div>
 
-            <h3 class="font-semibold mb-2">Description</h3>
-            <div class="text-gray-300 whitespace-pre-wrap">
-                {{ incident.description|default:"No description provided." }}
+            <div class="flex-1 bg-slate-950 p-5 overflow-y-auto font-mono text-xs lg:text-sm space-y-6">
+                {% for log in recent_logs %}
+                <div class="space-y-2 group">
+                    <div class="flex items-center justify-between border-b border-slate-900/80 pb-2">
+                        <div class="flex items-center gap-2 min-w-0">
+                            <i data-lucide="file-text" class="w-3 h-3 text-indigo-400 shrink-0"></i>
+                            <span class="text-[11px] text-indigo-400/80 font-bold truncate">{{ log.file_name }}</span>
+                        </div>
+                        <span class="text-[10px] text-slate-600 shrink-0 ml-2">{{ log.uploaded_at|naturaltime }}</span>
+                    </div>
+                    <div class="relative">
+                        <pre class="text-slate-300 whitespace-pre-wrap break-all md:break-words leading-relaxed pl-3 border-l-2 border-slate-800 group-hover:border-indigo-500/30 transition-colors">{{ log.processed_content|default:"" }}</pre>
+                        {% if log.file_name %}
+                        <div class="mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <a href="{% url 'log_viewer' log.id %}" class="text-[10px] font-bold text-indigo-400 hover:text-indigo-300 uppercase tracking-widest flex items-center">
+                                View Full Log <i data-lucide="external-link" class="w-3 h-3 ml-1.5"></i>
+                            </a>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% empty %}
+                <div class="h-full flex flex-col items-center justify-center text-center opacity-40">
+                    <i data-lucide="ghost" class="w-10 h-10 mb-3"></i>
+                    <p class="text-xs font-medium">No logs ingested yet.</p>
+                </div>
+                {% endfor %}
             </div>
         </div>
 
-        <!-- ================= AI ANALYSIS ================= -->
-        <div class="card">
-            <h2 class="text-xl font-bold mb-4">🤖 AI Incident Analysis</h2>
+        <div class="card-saas p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-sm font-bold text-white uppercase tracking-wider">Timeline</h3>
+                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Signal Path</span>
+            </div>
 
-            {% if analysis %}
+            <div class="space-y-4 relative before:absolute before:left-[11px] before:top-2 before:bottom-2 before:w-px before:bg-slate-800">
+                {% for ev in technical_timeline %}
+                <div class="relative pl-8 group">
+                    <div class="absolute left-0 top-1 w-6 h-6 rounded-full bg-slate-950 border border-slate-800 flex items-center justify-center z-10 group-hover:border-indigo-500/50 transition-colors">
+                        <div class="w-1.5 h-1.5 rounded-full {% if ev.level == 'ERROR' %}bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]{% elif ev.level == 'WARN' %}bg-amber-500{% else %}bg-indigo-500{% endif %}"></div>
+                    </div>
+                    <div class="p-3.5 rounded-xl bg-slate-900/30 border border-slate-800/50 group-hover:bg-slate-900/60 transition-all">
+                        <div class="flex items-center justify-between mb-1.5">
+                            <span class="text-[10px] font-bold uppercase tracking-widest {% if ev.level == 'ERROR' %}text-red-400{% elif ev.level == 'WARN' %}text-amber-400{% else %}text-indigo-400{% endif %}">
+                                {{ ev.level|default:"LOG" }}
+                            </span>
+                            <span class="text-[10px] font-mono text-slate-500">{{ ev.time|default:"" }}</span>
+                        </div>
+                        <p class="text-xs text-slate-300 leading-relaxed break-words">
+                            <span class="font-bold text-white mr-1">{{ ev.service|default:"system" }}:</span>
+                            {{ ev.message|default:"" }}
+                        </p>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-xs text-slate-500 text-center py-2 italic">No timeline events detected.</p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
 
-                {% if analysis.ai_status == "pending" %}
-                <div class="p-4 bg-yellow-900/20 border border-yellow-700 rounded">
-                    <p class="text-yellow-300 font-semibold">
-                        ⏳ AI analysis in progress…
+    <div class="col-span-1 lg:col-span-7 space-y-8 flex flex-col">
+        <div class="card-saas p-6 lg:p-8 bg-gradient-to-br from-slate-900/80 to-indigo-950/20 border-indigo-500/10 shadow-lg">
+            <div class="flex flex-col lg:flex-row lg:items-start justify-between gap-6">
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 flex-wrap mb-4">
+                        <span class="badge-saas severity-{{ incident.severity }}">{{ incident.get_severity_display }}</span>
+                        <span class="badge-saas status-{{ incident.status }}">{{ incident.get_status_display }}</span>
+                        <span class="px-2 py-1 rounded-md bg-slate-950 border border-slate-800 text-[10px] font-mono text-slate-400">#{{ incident.incident_id|default:incident.id }}</span>
+                    </div>
+                    <h1 class="text-2xl lg:text-3xl font-bold text-white tracking-tight leading-tight break-words">{{ incident.title }}</h1>
+                    <p class="mt-3 text-slate-400 text-sm leading-relaxed max-w-2xl break-words">
+                        {{ incident.description|default:"No manual description provided. Analysis based on technical signals below." }}
                     </p>
                 </div>
-                {% endif %}
 
-                {% if analysis.ai_status == "failed" %}
-                <div class="p-4 bg-red-900/20 border border-red-700 rounded">
-                    <p class="text-red-300 font-semibold">❌ AI Analysis Failed</p>
-                    <p class="text-gray-300 mt-2">
-                        {{ analysis.error_message|default:"Unknown AI error." }}
-                    </p>
-
-                    <form method="post"
-                          action="{% url 'trigger_ai_analysis' incident.id %}"
-                          class="mt-4">
+                <div class="flex flex-row lg:flex-col gap-3 shrink-0">
+                    <form method="post" action="{% url 'trigger_ai_analysis' incident.id %}" class="m-0">
                         {% csrf_token %}
-                        <button class="btn-secondary">
-                            Retry AI Analysis
+                        <button type="submit" class="btn-saas-primary w-full shadow-indigo-500/20">
+                            <i data-lucide="refresh-cw" class="w-4 h-4 mr-2"></i> Re-Analyze
                         </button>
                     </form>
+                    <button class="px-4 py-2.5 rounded-xl border border-slate-800 text-sm font-semibold text-slate-300 hover:text-white hover:bg-slate-900 transition-all flex items-center justify-center">
+                        <i data-lucide="share-2" class="w-4 h-4 mr-2"></i> Share
+                    </button>
                 </div>
-                {% endif %}
+            </div>
+        </div>
 
-                {% if analysis.ai_status == "completed" %}
-                <!-- CONFIDENCE -->
-                <div class="mb-6">
-                    <h3 class="font-semibold mb-2">Confidence Score</h3>
-                    <div class="flex items-center space-x-3">
-                        <progress value="{{ analysis.confidence_score|default:0 }}"
-                                  max="1"
-                                  class="w-full"></progress>
-                        <span class="font-mono text-sm">
-                            {{ analysis.confidence_score|default:0|floatformat:2 }}
+        {% if analysis %}
+            {% if analysis.ai_status == "pending" %}
+                <div
+                    id="analysis-pending-card"
+                    data-status-url="{% url 'incident_analysis_status' incident.id %}"
+                    class="card-saas p-6 lg:p-8 border-indigo-500/20 bg-indigo-500/5"
+                >
+                    <div class="flex items-start justify-between gap-4">
+                        <div>
+                            <h2 class="text-[11px] font-bold text-indigo-400 uppercase tracking-widest mb-3">AI Analysis In Progress</h2>
+                            <p id="analysis-pending-message" class="text-sm text-slate-300 leading-relaxed">
+                                Logs have been saved and the background worker is processing them now.
+                            </p>
+                        </div>
+                        <span class="px-3 py-1 rounded-full bg-slate-950 border border-slate-800 text-[10px] font-mono text-indigo-300">
+                            QUEUED
                         </span>
                     </div>
+                    <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+                        <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+                            <p class="text-slate-500 uppercase tracking-widest text-[10px] font-bold mb-2">Worker Progress</p>
+                            <p id="analysis-progress" class="text-slate-200">Waiting for worker update...</p>
+                        </div>
+                        <div class="rounded-xl border border-slate-800 bg-slate-950/60 p-4">
+                            <p class="text-slate-500 uppercase tracking-widest text-[10px] font-bold mb-2">What Happens Next</p>
+                            <p class="text-slate-300">Log masking, semantic retrieval, RCA generation, then postmortem creation.</p>
+                        </div>
+                    </div>
                 </div>
+                <script>
+                    (() => {
+                        const card = document.getElementById("analysis-pending-card");
+                        if (!card) return;
 
-                <!-- ROOT CAUSE -->
-                <div class="mb-6">
-                    <h3 class="font-semibold text-lg mb-2 text-indigo-400">
-                        Root Cause
-                    </h3>
-                    <p class="text-gray-300 whitespace-pre-wrap">
-                        {{ analysis.root_cause|default:"Root cause not determined." }}
+                        const progressEl = document.getElementById("analysis-progress");
+                        const messageEl = document.getElementById("analysis-pending-message");
+                        const poll = async () => {
+                            try {
+                                const response = await fetch(card.dataset.statusUrl, {
+                                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                                });
+                                if (!response.ok) {
+                                    return window.setTimeout(poll, 5000);
+                                }
+
+                                const data = await response.json();
+                                progressEl.textContent = `${data.processed_logs}/${data.total_logs} logs processed`;
+                                if (data.ai_status === "completed" || data.ai_status === "failed") {
+                                    window.location.reload();
+                                    return;
+                                }
+                                messageEl.textContent = "Background analysis is still running. This page will refresh automatically when it completes.";
+                            } catch (error) {
+                                progressEl.textContent = "Waiting for background worker...";
+                            }
+                            window.setTimeout(poll, 5000);
+                        };
+
+                        window.setTimeout(poll, 2500);
+                    })();
+                </script>
+                {% elif analysis.ai_status == "failed" %}
+                <div class="card-saas p-6 lg:p-8 border-rose-500/20 bg-rose-500/5">
+                    <h2 class="text-[11px] font-bold text-rose-400 uppercase tracking-widest mb-3">AI Analysis Failed</h2>
+                    <p class="text-sm text-slate-300 leading-relaxed">
+                        {{ analysis.error_message|default:"The analysis worker failed before it could generate a result." }}
                     </p>
                 </div>
+                {% elif analysis.ai_status == "completed" and ai_report %}
+                {% with ai=ai_report %}
+                    <div class="card-saas p-6 lg:p-8 relative group overflow-hidden">
+                        <div class="absolute top-6 right-6 text-indigo-500/10 group-hover:text-indigo-500/20 transition-colors pointer-events-none">
+                            <i data-lucide="sparkles" class="w-16 h-16"></i>
+                        </div>
+                        <h2 class="text-[11px] font-bold text-indigo-400 uppercase tracking-widest mb-3">AI Interpretation</h2>
+                        <div class="space-y-4 relative z-10">
+                            <p class="text-sm text-slate-200 leading-relaxed font-medium break-words">
+                                {{ ai.analysis_summary|default:analysis.explanation }}
+                            </p>
+                            {% if ai.failure_chain %}
+                            <div class="pt-4 border-t border-slate-800/50">
+                                <h3 class="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Failure Chain</h3>
+                                <p class="text-xs font-mono text-indigo-300/90 leading-relaxed">{{ ai.failure_chain }}</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
 
-                <!-- EXPLANATION -->
-                <div>
-                    <h3 class="font-semibold text-lg mb-2">
-                        Explanation
-                    </h3>
-                    <p class="text-gray-300 whitespace-pre-wrap">
-                        {{ analysis.explanation|default:"No explanation generated." }}
-                    </p>
-                </div>
-                {% endif %}
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="card-saas p-6 border-indigo-500/30 bg-indigo-500/5 relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-32 h-32 bg-indigo-500/10 blur-3xl rounded-full -mr-16 -mt-16 pointer-events-none"></div>
+                            <h2 class="text-[11px] font-bold text-indigo-400 uppercase tracking-widest mb-3">Root Cause</h2>
+                            <h3 class="text-lg font-bold text-white leading-tight mb-4 break-words">
+                                {{ ai.primary_root_cause|default:analysis.root_cause }}
+                            </h3>
+                            <div class="flex flex-wrap gap-2">
+                                {% for sub in ai.sub_causes %}
+                                <span class="px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/20 text-[9px] font-bold text-indigo-400 uppercase tracking-widest">
+                                    {{ sub }}
+                                </span>
+                                {% endfor %}
+                            </div>
+                        </div>
 
-            {% else %}
-                <p class="text-gray-400">No AI analysis yet.</p>
-                <form method="post"
-                      action="{% url 'trigger_ai_analysis' incident.id %}"
-                      class="mt-4">
-                    {% csrf_token %}
-                    <button class="btn-secondary">
-                        Run AI Analysis
-                    </button>
-                </form>
+                        <div class="card-saas p-6 flex flex-col justify-between">
+                            <div class="flex items-center justify-between mb-4">
+                                <h2 class="text-[11px] font-bold text-slate-500 uppercase tracking-widest">AI Confidence</h2>
+                                <span class="text-xl font-mono font-bold text-indigo-400">
+                                    {% if ai.confidence.score %}
+                                        {{ ai.confidence.score }}{% if ai.confidence.score <= 1 %}00{% endif %}%
+                                    {% else %}
+                                        {% widthratio analysis.confidence_score|default:0 1 100 %}%
+                                    {% endif %}
+                                </span>
+                            </div>
+                            <div class="space-y-3">
+                                <div class="h-2 w-full bg-slate-900 rounded-full overflow-hidden border border-slate-800">
+                                    {% with score=ai.confidence.score|default:analysis.confidence_score %}
+                                    <div class="h-full bg-gradient-to-r from-indigo-600 to-blue-400 rounded-full shadow-[0_0_10px_rgba(99,102,241,0.5)] transition-all duration-1000" 
+                                         style="width: 85%;"></div> <!-- Dynamic width handled by data attribute -->
+                                    <script>
+                                        document.currentScript.previousElementSibling.style.width = "{% if score <= 1 %}{% widthratio score 1 100 %}{% else %}{{ score|floatformat:0 }}{% endif %}%";
+                                    </script>
+                                    {% endwith %}
+                                </div>
+                                <p class="text-[10px] text-slate-500 font-medium leading-relaxed">
+                                    {{ ai.confidence.reason|default:"Evidence based on log pattern matching." }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-saas p-6 lg:p-8">
+                        <h2 class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-6 flex items-center">
+                            <i data-lucide="wrench" class="w-4 h-4 mr-2 text-slate-500"></i> Remediation Plan
+                        </h2>
+
+                        <div class="space-y-6">
+                            {% if ai.prioritized_resolutions.P0_immediate %}
+                            <div>
+                                <h3 class="text-[10px] font-bold text-rose-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]"></span> 
+                                    P0: Immediate Restoration
+                                </h3>
+                                <div class="space-y-2">
+                                    {% for fix in ai.prioritized_resolutions.P0_immediate %}
+                                    <div class="p-3 rounded-xl bg-rose-500/5 border border-rose-500/10 text-xs text-slate-300 leading-relaxed">
+                                        {{ fix }}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            {% if ai.prioritized_resolutions.P1_tactical %}
+                            <div>
+                                <h3 class="text-[10px] font-bold text-amber-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.6)]"></span> 
+                                    P1: Tactical / Root Fixes
+                                </h3>
+                                <div class="space-y-2">
+                                    {% for fix in ai.prioritized_resolutions.P1_tactical %}
+                                    <div class="p-3 rounded-xl bg-amber-500/5 border border-amber-500/10 text-xs text-slate-300 leading-relaxed">
+                                        {{ fix }}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            {% if ai.prioritized_resolutions.P2_prevention %}
+                            <div>
+                                <h3 class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.6)]"></span> 
+                                    P2: Long-term Prevention
+                                </h3>
+                                <div class="space-y-2">
+                                    {% for fix in ai.prioritized_resolutions.P2_prevention %}
+                                    <div class="p-3 rounded-xl bg-emerald-500/5 border border-emerald-500/10 text-xs text-slate-300 leading-relaxed">
+                                        {{ fix }}
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            {% if ai.safe_commands %}
+                            <div>
+                                <h3 class="text-[10px] font-bold text-indigo-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                    <span class="w-1 h-1 rounded-full bg-indigo-400"></span> Recommended Commands
+                                </h3>
+                                <div class="space-y-2">
+                                    {% for cmd in ai.safe_commands %}
+                                    <div class="rounded-xl bg-slate-950 border border-slate-800 overflow-hidden">
+                                        <div class="flex items-center justify-between px-3 py-1.5 bg-slate-900/50 border-b border-slate-800">
+                                            <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Safe CLI</span>
+                                            <button onclick="navigator.clipboard.writeText('{{ cmd|escapejs }}')" class="text-[9px] font-bold text-indigo-400 hover:text-white transition-colors uppercase tracking-widest">Copy</button>
+                                        </div>
+                                        <pre class="p-3 font-mono text-[11px] text-emerald-400/90 whitespace-pre-wrap break-all">{{ cmd }}</pre>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            {% if not ai.immediate_fixes and not ai.root_fixes and not ai.safe_commands %}
+                            <div class="text-center py-10 bg-slate-900/20 rounded-2xl border border-dashed border-slate-800">
+                                <p class="text-xs text-slate-500 italic">No remediation plan generated for this incident.</p>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if analysis.postmortem %}
+                        {% include 'incidents/partials/postmortem.html' with report=analysis.postmortem %}
+                    {% endif %}
+                {% endwith %}
             {% endif %}
-        </div>
-
-        <!-- ================= POSTMORTEM ================= -->
-        {% if analysis and analysis.postmortem %}
-        <div class="card">
-            <h2 class="text-xl font-bold mb-4">📝 Incident Postmortem</h2>
-
-            <pre class="text-gray-300 whitespace-pre-wrap mb-4">
-{{ analysis.postmortem }}
-            </pre>
-
-            <div class="flex space-x-3 mt-4">
-                <a href="{% url 'download_postmortem_md' incident.id %}"
-                   class="btn-secondary">
-                    ⬇️ Download Markdown
-                </a>
-
-                <a href="{% url 'download_postmortem_pdf' incident.id %}"
-                   class="btn-secondary">
-                    ⬇️ Download PDF
-                </a>
-            </div>
-        </div>
         {% endif %}
-
-        <!-- ================= LOGS ================= -->
-        {% if incident.logs.all %}
-        <div class="card">
-            <h2 class="text-xl font-bold mb-4">Logs</h2>
-            {% for log in incident.logs.all %}
-            <div class="p-3 bg-gray-800 rounded mb-2 flex justify-between">
-                <span>{{ log.file_name }}</span>
-                <a href="{% url 'log_viewer' log.id %}"
-                   class="text-indigo-400">
-                    View
-                </a>
-            </div>
-            {% endfor %}
-        </div>
-        {% endif %}
-
     </div>
-
-    <!-- ================= SIDEBAR ================= -->
-    <div class="space-y-6">
-        <div class="card">
-            <h3 class="font-semibold mb-3">Details</h3>
-            <p>
-                <span class="text-gray-400">Created:</span>
-                {{ incident.created_at|date:"M d, Y H:i" }}
-            </p>
-            <p>
-                <span class="text-gray-400">Created by:</span>
-                {{ incident.created_by.username }}
-            </p>
-            {% if incident.assigned_to %}
-            <p>
-                <span class="text-gray-400">Assigned:</span>
-                {{ incident.assigned_to.username }}
-            </p>
-            {% endif %}
-        </div>
-    </div>
-
 </div>
 {% endblock %}

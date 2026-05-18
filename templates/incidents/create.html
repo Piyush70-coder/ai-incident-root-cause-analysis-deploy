@@ -1,78 +1,108 @@
 {% extends 'base.html' %}
 
-{% block page_title %}Create Incident{% endblock %}
+{% block page_title %}Report Incident{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Django form inputs ko SaaS theme me style karne ke liye */
+    .saas-form-group input:not([type="file"]),
+    .saas-form-group textarea,
+    .saas-form-group select {
+        width: 100%;
+        background-color: rgba(15, 23, 42, 0.5);
+        border: 1px solid #1e293b;
+        border-radius: 0.75rem;
+        padding: 0.75rem 1rem;
+        font-size: 0.875rem;
+        color: #f8fafc;
+        transition: all 0.2s ease;
+    }
+    .saas-form-group input:focus,
+    .saas-form-group textarea:focus,
+    .saas-form-group select:focus {
+        outline: none;
+        border-color: rgba(99, 102, 241, 0.5);
+        box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+    }
+    .saas-form-group textarea {
+        min-height: 120px;
+        resize: vertical;
+    }
+</style>
+{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto">
-
-    <div class="mb-6">
-        <h1 class="text-2xl font-bold">Create New Incident</h1>
-        <p class="text-gray-400 text-sm mt-1">
-            Report a new incident and attach relevant logs for analysis.
-        </p>
+<div class="max-w-3xl mx-auto">
+    <div class="mb-8 flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-white tracking-tight">Create New Incident</h1>
+            <p class="text-slate-400 text-sm mt-1">Report a new system anomaly and attach logs for AI analysis.</p>
+        </div>
+        <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 flex items-center justify-center text-indigo-400 border border-indigo-500/20">
+            <i data-lucide="siren" class="w-6 h-6"></i>
+        </div>
     </div>
 
-    <form method="post" enctype="multipart/form-data" class="space-y-6">
+    <form method="post" enctype="multipart/form-data" class="space-y-6 saas-form-group">
         {% csrf_token %}
 
-        <!-- ================= BASIC INFO ================= -->
-        <div class="card space-y-4">
+        <div class="card-saas p-6 lg:p-8 space-y-6 bg-slate-900/20">
+            <div class="flex items-center gap-2 mb-2 border-b border-slate-800 pb-4">
+                <i data-lucide="info" class="w-4 h-4 text-slate-400"></i>
+                <h3 class="font-bold text-white text-sm uppercase tracking-widest">Incident Details</h3>
+            </div>
 
-            <div>
-                <label class="block text-sm font-medium mb-2">Title *</label>
+            <div class="space-y-2">
+                <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-1">Title *</label>
                 {{ form.title }}
             </div>
 
-            <div>
-                <label class="block text-sm font-medium mb-2">Description *</label>
+            <div class="space-y-2">
+                <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-1">Description *</label>
                 {{ form.description }}
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-sm font-medium mb-2">Severity *</label>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="space-y-2">
+                    <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-1">Severity *</label>
                     {{ form.severity }}
                 </div>
-
-                <div>
-                    <label class="block text-sm font-medium mb-2">Status *</label>
-                    {{ form.status }}
+                <div class="space-y-2">
+                    <label class="block text-[11px] font-bold text-slate-400 uppercase tracking-widest pl-1">Category</label>
+                    {{ form.category }}
                 </div>
             </div>
-
         </div>
 
-        <!-- ================= LOG UPLOAD ================= -->
-        <div class="card space-y-4">
-            <h3 class="font-semibold text-lg">Attach Log Files (Optional)</h3>
-
-            <div>
-                <input type="file"
-                       name="log_files"
-                       multiple
-                       class="block w-full text-sm text-gray-400
-                              file:mr-4 file:py-2 file:px-4
-                              file:rounded file:border-0
-                              file:text-sm file:font-semibold
-                              file:bg-gray-700 file:text-gray-200
-                              hover:file:bg-gray-600">
+        <div class="card-saas p-6 lg:p-8 space-y-4 bg-slate-900/20">
+            <div class="flex items-center gap-2 mb-2 border-b border-slate-800 pb-4">
+                <i data-lucide="file-code-2" class="w-4 h-4 text-slate-400"></i>
+                <h3 class="font-bold text-white text-sm uppercase tracking-widest">Evidence & Logs</h3>
             </div>
 
-            <p class="text-xs text-gray-400">
-                Supported formats: .log, .txt, .json
-            </p>
+            <div class="relative border-2 border-dashed border-slate-700 hover:border-indigo-500/50 rounded-xl p-8 transition-colors bg-slate-900/30 group text-center">
+                <input type="file" name="log_files" multiple class="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10">
+                <div class="flex flex-col items-center justify-center space-y-3">
+                    <div class="w-12 h-12 rounded-full bg-slate-800 group-hover:bg-indigo-500/20 flex items-center justify-center text-slate-400 group-hover:text-indigo-400 transition-colors">
+                        <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <p class="text-sm font-bold text-white group-hover:text-indigo-400 transition-colors">Click to upload or drag and drop</p>
+                        <p class="text-xs text-slate-500 mt-1">Supported formats: .log, .txt, .json (Max 10MB)</p>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- ================= ACTIONS ================= -->
-        <div class="flex justify-end space-x-4">
-            <a href="{% url 'incident_list' %}" class="btn-secondary">
+        <div class="flex items-center justify-end gap-4 pt-4">
+            <a href="{% url 'incident_list' %}" class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
                 Cancel
             </a>
-            <button type="submit" class="btn-primary">
-                Create Incident
+            <button type="submit" class="btn-saas-primary shadow-indigo-500/20">
+                <i data-lucide="save" class="w-4 h-4 mr-2"></i>
+                Submit Incident
             </button>
         </div>
-
     </form>
 </div>
 {% endblock %}

@@ -4,25 +4,41 @@ __pycache__/
 *$py.class
 *.so
 .Python
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
 venv/
 env/
 ENV/
+
+# Packaging
 *.egg-info/
 dist/
 build/
+pip-wheel-metadata/
 
 # Django
 *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
-/media
-/staticfiles
-/static
+media/
+staticfiles/
+static/
 
 # Environment
 .env
 .env.local
+.env.*.local
+!.env.example
+
+# Celery / Redis
+celerybeat-schedule
+celerybeat.pid
+dump.rdb
 
 # IDE
 .vscode/
@@ -35,7 +51,10 @@ db.sqlite3-journal
 .DS_Store
 Thumbs.db
 
-# Celery
-celerybeat-schedule
-celerybeat.pid
+# Local data / caches
+*.sqlite3
+*.sqlite3-journal
 
+
+
+incidents/ai_models/

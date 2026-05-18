@@ -18,11 +18,10 @@ def export_postmortem_markdown(incident):
     filename = f"postmortem_{incident.id}.md"
     return filename, content
 
-from reportlab.platypus import SimpleDocTemplate, Paragraph
-from reportlab.lib.styles import getSampleStyleSheet
-
-
 def export_postmortem_pdf(incident, file_path):
+    from reportlab.lib.styles import getSampleStyleSheet
+    from reportlab.platypus import Paragraph, SimpleDocTemplate
+
     analysis = incident.analysis
     styles = getSampleStyleSheet()
 

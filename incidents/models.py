@@ -90,8 +90,18 @@ class Incident(models.Model):
         help_text="For planned maintenance"
     )
 
+    occurrence_count = models.IntegerField(default=1)
+    last_seen_at = models.DateTimeField(null=True, blank=True)
+    error_signature = models.CharField(max_length=512, blank=True, db_index=True)
+    needs_follow_up = models.BooleanField(default=False)
+
     class Meta:
         ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['company', '-created_at'], name='inc_cmp_created_idx'),
+            models.Index(fields=['company', '-last_seen_at'], name='inc_cmp_seen_idx'),
+            models.Index(fields=['company', 'status'], name='inc_cmp_status_idx'),
+        ]
 
     def save(self, *args, **kwargs):
         from django.utils import timezone
@@ -126,7 +136,14 @@ class IncidentLog(models.Model):
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     processed = models.BooleanField(default=False)
+    raw_content = models.TextField(blank=True)
     processed_content = models.TextField(blank=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['incident', '-uploaded_at'], name='inclog_inc_up_idx'),
+            models.Index(fields=['incident', 'processed'], name='inclog_inc_proc_idx'),
+        ]
 
     def __str__(self):
         return f"{self.file_name} - {self.incident.title}"
@@ -171,6 +188,11 @@ class IncidentAnalysis(models.Model):
     root_cause = models.TextField(blank=True)
     explanation = models.TextField(blank=True)
     postmortem = models.TextField(blank=True, null=True)
+    is_corrected = models.BooleanField(default=False)
+    user_root_cause = models.TextField(blank=True)
+    feedback_notes = models.TextField(blank=True)
+    structured_output = models.JSONField(default=dict, blank=True)
+    full_ai_report = models.JSONField(default=dict, blank=True)
 
     confidence_score = models.FloatField(default=0.0)
 

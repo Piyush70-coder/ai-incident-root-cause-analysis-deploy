@@ -4,7 +4,6 @@ Updated to use FAISS/RAG for extracting relevant log lines.
 """
 import re
 from incidents.services.similarity_service import find_similar_incidents_db, filter_relevant_logs
-from incidents.services.log_processor import process_log_file, extract_key_errors
 
 
 def detect_infra_signals(logs, description: str) -> dict:

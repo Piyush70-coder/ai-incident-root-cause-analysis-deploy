@@ -1,48 +1,96 @@
 import numpy as np
-import faiss
+from django.conf import settings
+from django.db.models import Count, Max
+
 from incidents.models import IncidentEmbedding
 from incidents.services.embedding_service import get_embedding, model
 
+_DB_INDEX_CACHE = {
+    "count": None,
+    "latest_created_at": None,
+    "index": None,
+    "incidents": [],
+}
+
+
+def _load_faiss():
+    try:
+        import faiss
+
+        return faiss
+    except Exception:
+        return None
+
 
 def normalize_vectors(vectors):
-    """
-    Vectors ko normalize karta hai taaki Cosine Similarity kaam kare
-    (FAISS L2 index ke saath normalized vectors = Cosine Similarity)
-    """
+    faiss = _load_faiss()
+    if faiss is None:
+        return vectors
     faiss.normalize_L2(vectors)
     return vectors
 
 
-def find_similar_incidents_db(target_text, top_k=3):
-    """
-    FAISS ka use karke DB me se similar incidents dhoondta hai.
-    (Previous 'cosine_similarity' logic se 100x fast hai)
-    """
-    # 1. Target ka embedding nikalo
-    target_vector = np.array([get_embedding(target_text)]).astype('float32')
-    normalize_vectors(target_vector)
+def _build_cached_incident_index():
+    faiss = _load_faiss()
+    if faiss is None:
+        return None, []
 
-    # 2. DB se saare vectors fetch karo
-    embeddings = IncidentEmbedding.objects.select_related("incident")
-    if not embeddings.exists():
-        return []
+    stats = IncidentEmbedding.objects.aggregate(
+        count=Count("id"),
+        latest_created_at=Max("created_at"),
+    )
+    if not stats["count"]:
+        _DB_INDEX_CACHE.update(
+            {
+                "count": 0,
+                "latest_created_at": None,
+                "index": None,
+                "incidents": [],
+            }
+        )
+        return None, []
 
-    # Vectors ko numpy array me convert karo
-    db_vectors = [e.vector for e in embeddings]
-    db_vectors_np = np.array(db_vectors).astype('float32')
+    if (
+        _DB_INDEX_CACHE["index"] is not None
+        and _DB_INDEX_CACHE["count"] == stats["count"]
+        and _DB_INDEX_CACHE["latest_created_at"] == stats["latest_created_at"]
+    ):
+        return _DB_INDEX_CACHE["index"], _DB_INDEX_CACHE["incidents"]
+
+    embeddings = list(IncidentEmbedding.objects.select_related("incident"))
+    db_vectors_np = np.array([item.vector for item in embeddings], dtype="float32")
     normalize_vectors(db_vectors_np)
 
-    incidents = [e.incident for e in embeddings]
-
-    # 3. FAISS Index banao (Inner Product for Cosine Similarity)
     dimension = db_vectors_np.shape[1]
     index = faiss.IndexFlatIP(dimension)
     index.add(db_vectors_np)
 
-    # 4. Search karo
-    distances, indices = index.search(target_vector, top_k)
+    _DB_INDEX_CACHE.update(
+        {
+            "count": stats["count"],
+            "latest_created_at": stats["latest_created_at"],
+            "index": index,
+            "incidents": [item.incident for item in embeddings],
+        }
+    )
+    return index, _DB_INDEX_CACHE["incidents"]
 
-    # 5. Results format karo
+
+def find_similar_incidents_db(target_text, top_k=3):
+    if not getattr(settings, "ENABLE_SEMANTIC_RETRIEVAL", True):
+        return []
+
+    try:
+        target_vector = np.array([get_embedding(target_text)], dtype="float32")
+    except Exception:
+        return []
+
+    normalize_vectors(target_vector)
+    index, incidents = _build_cached_incident_index()
+    if index is None or not incidents:
+        return []
+
+    distances, indices = index.search(target_vector, top_k)
     results = []
     for i in range(top_k):
         idx = indices[0][i]
@@ -54,44 +102,38 @@ def find_similar_incidents_db(target_text, top_k=3):
 
 
 def filter_relevant_logs(query_text, log_lines, top_k=10):
-    """
-    Log lines me se sirf wo lines nikalta hai jo query (error) se match karti hain.
-    Ye RAG (Retrieval Augmented Generation) ka core part hai.
-    """
+    if not getattr(settings, "ENABLE_SEMANTIC_RETRIEVAL", True):
+        return log_lines[:top_k]
+
     if not log_lines:
         return []
-
-    # Agar logs bahut kam hain, toh filter karne ki zaroorat nahi
     if len(log_lines) <= top_k:
         return log_lines
 
-    # 1. Saari log lines ka embedding ek saath nikalo (Batch Processing)
-    # Note: 'model' ko direct use kar rahe hain speed ke liye
+    faiss = _load_faiss()
+    if faiss is None:
+        return log_lines[:top_k]
+
     try:
-        line_vectors = model.encode(log_lines)
-        line_vectors = np.array(line_vectors).astype('float32')
+        line_vectors = model.encode(log_lines, show_progress_bar=False)
+        line_vectors = np.array(line_vectors, dtype="float32")
         normalize_vectors(line_vectors)
-    except Exception as e:
-        print(f"Error embedding logs: {e}")
-        return log_lines[:top_k]  # Fallback
+    except Exception:
+        return log_lines[:top_k]
 
-    # 2. Query (Incident Title/Desc) ka embedding
-    query_vector = np.array([get_embedding(query_text)]).astype('float32')
+    try:
+        query_vector = np.array([get_embedding(query_text)], dtype="float32")
+    except Exception:
+        return log_lines[:top_k]
+
     normalize_vectors(query_vector)
-
-    # 3. FAISS Index banao
     dimension = line_vectors.shape[1]
     index = faiss.IndexFlatIP(dimension)
     index.add(line_vectors)
+    _, indices = index.search(query_vector, top_k)
 
-    # 4. Search karo sabse relevant lines
-    distances, indices = index.search(query_vector, top_k)
-
-    # 5. Original lines wapas return karo
     relevant_lines = []
-    found_indices = sorted(indices[0])  # Sort indices to keep logs in original order (time order)
-
-    for idx in found_indices:
+    for idx in sorted(indices[0]):
         if idx != -1 and idx < len(log_lines):
             relevant_lines.append(log_lines[idx])
 

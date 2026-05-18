@@ -1,47 +1,47 @@
+import logging
+
 from celery import shared_task
+from django.conf import settings
 from django.db import transaction
-from django.utils import timezone
 
-from incidents.models import Incident, IncidentAnalysis, IncidentLog
-from incidents.services.embedding_service import save_incident_embedding
-from incidents.services.context_builder_simple import (
-    build_incident_context_with_similarity
-)
-from incidents.services.text_generation import generate_root_cause
-from incidents.services.ai_parser import parse_ai_output
-from incidents.services.postmortem_service import generate_postmortem
-from incidents.services.log_processor import process_log_file
+logger = logging.getLogger(__name__)
 
 
-# =========================================================
-# STEP 1: GENERATE EMBEDDING (MiniLM)
-# =========================================================
-@shared_task
+@shared_task(ignore_result=True)
 def generate_incident_embedding(incident_id):
-    """
-    Incident title → MiniLM embedding → DB save
-    """
+    if not getattr(settings, "ENABLE_SEMANTIC_RETRIEVAL", True):
+        return
+
+    from incidents.models import Incident
+    from incidents.services.embedding_service import save_incident_embedding
+
     try:
         incident = Incident.objects.get(id=incident_id)
     except Incident.DoesNotExist:
         return
 
-    save_incident_embedding(incident, incident.title)
+    try:
+        save_incident_embedding(incident, incident.title)
+    except Exception:
+        logger.exception("Embedding generation failed for incident %s", incident_id)
 
 
-# =========================================================
-# STEP 2: ROOT CAUSE ANALYSIS (FLAN-T5)
-# =========================================================
 @shared_task(
     bind=True,
     autoretry_for=(Exception,),
     retry_backoff=10,
     retry_kwargs={"max_retries": 3},
+    ignore_result=True,
 )
 def generate_root_cause_analysis(self, incident_id):
-    """
-    Incident → Similar Incidents → Context → FLAN-T5 → Parsed RCA
-    """
+    from incidents.models import Incident, IncidentAnalysis
+    from incidents.services import ai_parser
+    from incidents.services.context_builder_simple import (
+        build_incident_context_with_similarity,
+    )
+    from incidents.services.log_processor import extract_smart_context
+    from incidents.services.text_generation import generate_root_cause
+
     try:
         incident = Incident.objects.get(id=incident_id)
     except Incident.DoesNotExist:
@@ -49,103 +49,155 @@ def generate_root_cause_analysis(self, incident_id):
 
     analysis, _ = IncidentAnalysis.objects.get_or_create(
         incident=incident,
-        defaults={"ai_status": "pending"}
+        defaults={"ai_status": "pending"},
     )
 
     try:
-        # 1️⃣ Build context (logs + similar incidents)
         context = build_incident_context_with_similarity(incident)
+        smart_context = extract_smart_context(context)
 
-        # 2️⃣ Generate raw AI output
-        ai_result = generate_root_cause(context)
+        ai_result = generate_root_cause(smart_context)
         raw_output = ai_result.get("raw", "")
+        llm_error = ai_result.get("error")
+        if llm_error:
+            raise RuntimeError(llm_error)
 
-        # 3️⃣ Parse AI output
-        root_cause, explanation, ai_confidence = parse_ai_output(raw_output)
+        parsed = ai_parser.parse_sre_structured_output(
+            raw_output or "{}",
+            extra_context=smart_context,
+        )
+        payload = parsed["payload"]
+        final_confidence = float(parsed["confidence_score"])
+        severity_label = parsed.get("severity") or ""
 
-        # 4️⃣ Heuristic Confidence Calculation
-        final_confidence = 0.30  # Base confidence
-
-        # Keyword heuristics (Infra-specific)
-        infra_keywords = ['redis', 'database', 'postgres', 'dns', 'cpu', 'memory', 'disk', 'network', 'kafka', 'queue', '504', '502', 'timeout']
-        if any(k in root_cause.lower() for k in infra_keywords):
-            final_confidence += 0.20
-        
-        # Log evidence heuristic (Timestamps / Errors)
-        # Check for typical timestamp patterns or 'error' keyword in context
-        if "error" in context.lower() or "exception" in context.lower():
-            final_confidence += 0.10
-        
-        # Similarity heuristic
-        if incident.similar_incidents.exists():
-            final_confidence += 0.15
-
-        # Cap confidence at strict 0.85
-        final_confidence = min(0.85, final_confidence)
-
-        # 5️⃣ Save analysis atomically
         with transaction.atomic():
-            analysis.root_cause = root_cause
-            analysis.explanation = explanation
+            if parsed.get("is_error_response"):
+                analysis.root_cause = ""
+                analysis.explanation = str(parsed.get("explanation") or "")
+                analysis.confidence_score = 0.0
+                analysis.severity = ""
+                analysis.structured_output = payload
+                analysis.full_ai_report = payload
+                analysis.ai_status = "failed"
+                analysis.error_message = str(parsed.get("explanation") or "")[:500]
+                analysis.save()
+                return
+
+            if not parsed.get("root_cause"):
+                raise ValueError("AI response missing primary root cause")
+
+            analysis.root_cause = str(parsed["root_cause"])
+            analysis.explanation = str(parsed.get("explanation") or "")
             analysis.confidence_score = final_confidence
+            analysis.severity = severity_label
+            analysis.structured_output = payload
+            analysis.full_ai_report = payload
+
+            resolutions = payload.get("prioritized_resolutions", {})
+            imm = resolutions.get("P0_immediate") or payload.get("immediate_fixes")
+            if isinstance(imm, list):
+                analysis.mitigation_steps = "\n".join(
+                    f"- {step}" for step in imm if str(step).strip()
+                )
+
+            tactical = resolutions.get("P1_tactical", []) or payload.get("root_fixes", [])
+            prev = resolutions.get("P2_prevention", []) or payload.get(
+                "prevention_steps",
+                [],
+            )
+            cmds = payload.get("safe_commands", [])
+            fix_parts = []
+            if isinstance(tactical, list) and tactical:
+                fix_parts.append(
+                    "Priority P1 (Tactical Fixes):\n"
+                    + "\n".join(f"- {step}" for step in tactical)
+                )
+            if isinstance(prev, list) and prev:
+                fix_parts.append(
+                    "Priority P2 (Prevention):\n"
+                    + "\n".join(f"- {step}" for step in prev)
+                )
+            if isinstance(cmds, list) and cmds:
+                fix_parts.append(
+                    "Safe Commands:\n" + "\n".join(f"  {command}" for command in cmds)
+                )
+            analysis.fix_steps = "\n\n".join(fix_parts)
+
+            pm_parts = [
+                f"Summary: {payload.get('analysis_summary', '')}",
+                f"Failure Chain: {payload.get('failure_chain', '')}",
+                f"Root Cause: {parsed['root_cause']}",
+            ]
+            depth = payload.get("root_cause_depth", [])
+            if depth:
+                pm_parts.append(
+                    "Technical Depth Analysis:\n"
+                    + "\n".join(
+                        f"- [{item.get('component')}] {item.get('failure')}: {item.get('why')}"
+                        for item in depth
+                    )
+                )
+            if imm:
+                pm_parts.append(
+                    "P0 Immediate Actions:\n"
+                    + "\n".join(f"- {step}" for step in imm)
+                )
+            if tactical:
+                pm_parts.append(
+                    "P1 Root Fixes:\n" + "\n".join(f"- {step}" for step in tactical)
+                )
+            analysis.postmortem = "\n\n".join(part for part in pm_parts if part.strip())
             analysis.ai_status = "completed"
             analysis.error_message = ""
-            analysis.completed_at = timezone.now()
             analysis.save()
 
-    except Exception as e:
+        generate_postmortem_report.delay(str(incident.id))
+    except Exception as exc:
         analysis.ai_status = "failed"
-        analysis.error_message = str(e)[:500]
-        analysis.save()
+        analysis.error_message = str(exc)[:500]
+        analysis.save(update_fields=["ai_status", "error_message", "updated_at"])
+        logger.exception("Root cause analysis failed for incident %s", incident_id)
         raise
 
 
-# =========================================================
-# STEP 3: POSTMORTEM GENERATION
-# =========================================================
 @shared_task(
     bind=True,
     autoretry_for=(Exception,),
     retry_backoff=10,
     retry_kwargs={"max_retries": 3},
+    ignore_result=True,
 )
 def generate_postmortem_report(self, incident_id):
-    """
-    Incident + RCA → AI Postmortem
-    """
+    from incidents.models import Incident, IncidentAnalysis
+    from incidents.services.postmortem_service import generate_postmortem
+
     try:
         incident = Incident.objects.get(id=incident_id)
     except Incident.DoesNotExist:
         return
 
     analysis, _ = IncidentAnalysis.objects.get_or_create(incident=incident)
+    if not analysis.root_cause and not analysis.explanation:
+        return
 
     try:
-        context = build_incident_context_with_similarity(incident)
-        
-        # Use existing analysis data if available
-        root_cause = analysis.root_cause
-        explanation = analysis.explanation
-        
-        report = generate_postmortem(context, root_cause, explanation)
-
+        report = generate_postmortem(
+            analysis.full_ai_report or analysis.structured_output or "",
+            analysis.root_cause,
+            analysis.explanation,
+        )
         analysis.postmortem = report
-        analysis.save()
-
-    except Exception as e:
-        analysis.error_message = str(e)[:500]
-        analysis.save()
+        analysis.save(update_fields=["postmortem", "updated_at"])
+    except Exception:
+        logger.exception("Postmortem generation failed for incident %s", incident_id)
         raise
 
 
-# =========================================================
-# STEP 4: PROCESS INCIDENT LOGS
-# =========================================================
-@shared_task
-def process_incident_logs(incident_id):
-    """
-    Ensure all logs for an incident are processed and content extracted.
-    """
+@shared_task(ignore_result=True)
+def process_incident_logs(incident_id, trigger_ai=True):
+    from incidents.models import IncidentLog
+    from incidents.services.log_processor import process_log_file
+
     try:
         logs = IncidentLog.objects.filter(incident_id=incident_id, processed=False)
         for log in logs:
@@ -154,9 +206,15 @@ def process_incident_logs(incident_id):
                 if processed_content:
                     log.processed_content = processed_content
                     log.processed = True
-                    log.save(update_fields=['processed_content', 'processed'])
-            except Exception as e:
-                # Log error but continue processing other logs
-                print(f"Error processing log {log.id}: {e}")
-    except Exception as e:
-        print(f"Error in process_incident_logs task: {e}")
+                    log.raw_content = ""
+                    log.save(
+                        update_fields=["processed_content", "processed", "raw_content"]
+                    )
+            except Exception:
+                logger.exception("Log processing failed for log %s", log.id)
+    except Exception:
+        logger.exception("Error in process_incident_logs task for incident %s", incident_id)
+        return
+
+    if trigger_ai:
+        generate_root_cause_analysis.delay(incident_id)

@@ -1,8 +1,25 @@
-from sentence_transformers import SentenceTransformer
 from incidents.models import IncidentEmbedding
 
-# Model ek baar load hoga
-model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+_model = None
+
+
+def _get_model():
+    global _model
+    if _model is None:
+        from sentence_transformers import SentenceTransformer
+
+        _model = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+    return _model
+
+
+class _LazySentenceTransformer:
+    """Delegates to the real model on first use (backward-compatible `model` import)."""
+
+    def __getattr__(self, name):
+        return getattr(_get_model(), name)
+
+
+model = _LazySentenceTransformer()
 
 
 def get_embedding(text: str):
@@ -10,7 +27,7 @@ def get_embedding(text: str):
     Text → vector (numbers)
     DB friendly list return karta hai
     """
-    return model.encode(text).tolist()
+    return _get_model().encode(text).tolist()
 
 
 def save_incident_embedding(incident, text: str):
