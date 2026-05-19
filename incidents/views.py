@@ -28,7 +28,8 @@ from .services.log_ingestion_handler import handle_log_ingestion
 from .tasks import (
     generate_incident_embedding,
     process_incident_logs,
-    is_render_deployment
+    is_render_deployment,
+    dispatch_task
 )
 from accounts.models import CustomUser
 
@@ -181,13 +182,9 @@ def incident_create_view(request):
                 )
 
                 _incident_id = str(incident.id)
-                if is_render_deployment():
-                    # Execute synchronously for Render free tier
-                    transaction.on_commit(lambda iid=_incident_id: process_incident_logs(iid, True))
-                    transaction.on_commit(lambda iid=_incident_id: generate_incident_embedding(iid))
-                else:
-                    transaction.on_commit(lambda iid=_incident_id: process_incident_logs.delay(iid, True))
-                    transaction.on_commit(lambda iid=_incident_id: generate_incident_embedding.delay(iid))
+                # Dispatch tasks (synchronously on Render, asynchronously otherwise)
+                transaction.on_commit(lambda iid=_incident_id: dispatch_task(process_incident_logs, iid, True))
+                transaction.on_commit(lambda iid=_incident_id: dispatch_task(generate_incident_embedding, iid))
 
             NotificationService.notify_incident_created(incident)
             messages.success(
@@ -352,12 +349,8 @@ def trigger_ai_analysis(request, incident_id):
         defaults={"ai_status": "pending", "error_message": ""}
     )
 
-    if is_render_deployment():
-        process_incident_logs(str(incident.id), True)
-        generate_incident_embedding(str(incident.id))
-    else:
-        process_incident_logs.delay(str(incident.id), True)
-        generate_incident_embedding.delay(str(incident.id))
+    dispatch_task(process_incident_logs, str(incident.id), True)
+    dispatch_task(generate_incident_embedding, str(incident.id))
 
     payload = {
         "status": "AI analysis started",

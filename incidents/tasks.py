@@ -12,6 +12,16 @@ def is_render_deployment():
     return getattr(settings, "IS_RENDER", False)
 
 
+def dispatch_task(task, *args, **kwargs):
+    """
+    Dispatch a task: synchronously if on Render, otherwise asynchronously via Celery.
+    """
+    if is_render_deployment():
+        logger.info("Executing task %s synchronously (Render mode)", task.__name__)
+        return task.apply(args=args, kwargs=kwargs)
+    return task.delay(*args, **kwargs)
+
+
 @shared_task(ignore_result=True)
 def generate_incident_embedding(incident_id):
     if not getattr(settings, "ENABLE_SEMANTIC_RETRIEVAL", True):
@@ -58,15 +68,19 @@ def generate_root_cause_analysis(self, incident_id):
     )
 
     try:
+        logger.info("Starting AI analysis for incident %s", incident_id)
         context = build_incident_context_with_similarity(incident)
         smart_context = extract_smart_context(context)
+        logger.info("Context built for incident %s (%d chars)", incident_id, len(smart_context))
 
         ai_result = generate_root_cause(smart_context)
         raw_output = ai_result.get("raw", "")
         llm_error = ai_result.get("error")
         if llm_error:
+            logger.error("LLM Error for incident %s: %s", incident_id, llm_error)
             raise RuntimeError(llm_error)
 
+        logger.info("AI generation complete for incident %s, parsing results...", incident_id)
         parsed = ai_parser.parse_sre_structured_output(
             raw_output or "{}",
             extra_context=smart_context,
@@ -155,11 +169,9 @@ def generate_root_cause_analysis(self, incident_id):
             analysis.ai_status = "completed"
             analysis.error_message = ""
             analysis.save()
+            logger.info("Successfully completed AI analysis for incident %s", incident_id)
 
-        if is_render_deployment():
-            generate_postmortem_report.run(None, str(incident.id))
-        else:
-            generate_postmortem_report.delay(str(incident.id))
+        dispatch_task(generate_postmortem_report, str(incident.id))
     except Exception as exc:
         analysis.ai_status = "failed"
         analysis.error_message = str(exc)[:500]
@@ -225,7 +237,4 @@ def process_incident_logs(incident_id, trigger_ai=True):
         return
 
     if trigger_ai:
-        if is_render_deployment():
-            generate_root_cause_analysis.run(None, incident_id)
-        else:
-            generate_root_cause_analysis.delay(incident_id)
+        dispatch_task(generate_root_cause_analysis, incident_id)

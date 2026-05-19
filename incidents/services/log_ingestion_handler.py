@@ -19,19 +19,14 @@ TERMINAL_STATUSES = frozenset({"resolved", "closed"})
 
 def _queue_incident_processing(incident_id: str, trigger_ai: bool) -> None:
     from incidents.tasks import (
+        dispatch_task,
         generate_incident_embedding,
-        is_render_deployment,
         process_incident_logs,
     )
 
-    if is_render_deployment():
-        process_incident_logs(incident_id, trigger_ai)
-        if trigger_ai:
-            generate_incident_embedding(incident_id)
-    else:
-        process_incident_logs.delay(incident_id, trigger_ai)
-        if trigger_ai:
-            generate_incident_embedding.delay(incident_id)
+    dispatch_task(process_incident_logs, incident_id, trigger_ai)
+    if trigger_ai:
+        dispatch_task(generate_incident_embedding, incident_id)
 
 
 def _incident_title_from_signature(signature: str, raw_content: str) -> str:
