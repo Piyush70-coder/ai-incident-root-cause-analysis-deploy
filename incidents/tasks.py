@@ -7,6 +7,11 @@ from django.db import transaction
 logger = logging.getLogger(__name__)
 
 
+def is_render_deployment():
+    """Detect if we are running on Render."""
+    return getattr(settings, "IS_RENDER", False)
+
+
 @shared_task(ignore_result=True)
 def generate_incident_embedding(incident_id):
     if not getattr(settings, "ENABLE_SEMANTIC_RETRIEVAL", True):
@@ -151,7 +156,10 @@ def generate_root_cause_analysis(self, incident_id):
             analysis.error_message = ""
             analysis.save()
 
-        generate_postmortem_report.delay(str(incident.id))
+        if is_render_deployment():
+            generate_postmortem_report.run(None, str(incident.id))
+        else:
+            generate_postmortem_report.delay(str(incident.id))
     except Exception as exc:
         analysis.ai_status = "failed"
         analysis.error_message = str(exc)[:500]
@@ -217,4 +225,7 @@ def process_incident_logs(incident_id, trigger_ai=True):
         return
 
     if trigger_ai:
-        generate_root_cause_analysis.delay(incident_id)
+        if is_render_deployment():
+            generate_root_cause_analysis.run(None, incident_id)
+        else:
+            generate_root_cause_analysis.delay(incident_id)

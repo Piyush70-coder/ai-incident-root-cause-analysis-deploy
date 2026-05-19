@@ -20,9 +20,6 @@
 {% block content %}
 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8 sm:mb-10">
     <div class="card-saas dashboard-metric-card p-4 sm:p-6 relative overflow-hidden group">
-erflow-hidden group">
-erflow-hidden group">
-erflow-hidden group">
         <div class="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 blur-2xl rounded-full -mr-10 -mt-10 group-hover:bg-blue-500/10 transition-colors"></div>
         <div class="flex items-center justify-between relative z-10">
             <div>
@@ -195,7 +192,7 @@ erflow-hidden group">
             </thead>
             <tbody class="divide-y divide-slate-900">
                 {% for incident in recent_incidents %}
-                <tr class="group hover:bg-slate-900/40 cursor-pointer transition-colors" onclick="window.location='{% url 'incident_detail' incident.id %}';">
+                <tr class="group hover:bg-slate-900/40 cursor-pointer transition-colors" onclick="location.href='{% url 'incident_detail' incident.id %}';">
                     <td class="px-4 sm:px-8 py-5">
                         <div class="flex items-center gap-3">
                             <div class="w-1.5 h-1.5 rounded-full {% if incident.severity == 'critical' %}bg-rose-500 shadow-[0_0_8px_rgba(244,63,94,0.6)]{% elif incident.severity == 'high' %}bg-orange-500{% else %}bg-indigo-500{% endif %}"></div>
