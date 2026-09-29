@@ -15,9 +15,12 @@ class AnalyticsService:
     def get_dashboard_metrics(company):
         """Get all dashboard metrics for a company"""
         cache_key = f'dashboard_metrics_{company.id}'
-        cached = cache.get(cache_key)
-        if cached:
-            return cached
+        try:
+            cached = cache.get(cache_key)
+            if cached:
+                return cached
+        except Exception:
+            pass
         
         incidents = Incident.objects.filter(company=company)
         now = timezone.now()
@@ -92,16 +95,23 @@ class AnalyticsService:
         service_counts = Counter(all_services)
         metrics['top_services'] = dict(service_counts.most_common(15))
         
-        cache.set(cache_key, metrics, AnalyticsService.CACHE_TIMEOUT)
+        try:
+            cache.set(cache_key, metrics, AnalyticsService.CACHE_TIMEOUT)
+        except Exception:
+            pass
+
         return metrics
     
     @staticmethod
     def get_incidents_timeseries(company, days=30):
         """Get incidents count over time for charting"""
         cache_key = f'incidents_timeseries_{company.id}_{days}'
-        cached = cache.get(cache_key)
-        if cached:
-            return cached
+        try:
+            cached = cache.get(cache_key)
+            if cached:
+                return cached
+        except Exception:
+            pass
         
         start_date = timezone.now() - timedelta(days=days)
         incidents = Incident.objects.filter(
@@ -139,7 +149,11 @@ class AnalyticsService:
                 'mttr': mttr_map.get(day, 0)
             })
 
-        cache.set(cache_key, data, AnalyticsService.CACHE_TIMEOUT)
+        try:
+            cache.set(cache_key, data, AnalyticsService.CACHE_TIMEOUT)
+        except Exception:
+            pass
+
         return data
     
     @staticmethod
@@ -163,4 +177,3 @@ class AnalyticsService:
         )
         
         return list(data)
-

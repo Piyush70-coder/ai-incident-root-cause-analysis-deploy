@@ -265,23 +265,24 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 REDIS_URL = os.getenv("REDIS_URL", "").strip()
 
-if not REDIS_URL:
-    if DEBUG:
-        REDIS_URL = "redis://localhost:6379/0"
-    else:
-        raise ValueError("Missing REDIS_URL")
-
-CACHES = {
-    "default": {
-        "BACKEND":
-        "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": REDIS_URL,
+if REDIS_URL and (REDIS_URL.startswith("redis://") or REDIS_URL.startswith("rediss://")):
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.redis.RedisCache",
+            "LOCATION": REDIS_URL,
+            "OPTIONS": {
+                "ignore_exceptions": True,
+            },
+        }
     }
-}
-
-if REDIS_URL.startswith("rediss://"):
-    CACHES["default"]["OPTIONS"] = {
-        "ssl_cert_reqs": ssl.CERT_NONE,
+    if REDIS_URL.startswith("rediss://"):
+        CACHES["default"]["OPTIONS"]["ssl_cert_reqs"] = ssl.CERT_NONE
+else:
+    CACHES = {
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "incident_management_local_cache",
+        }
     }
 
 
@@ -292,11 +293,13 @@ if REDIS_URL.startswith("rediss://"):
 CELERY_BROKER_URL = (
     os.getenv("CELERY_BROKER_URL")
     or REDIS_URL
+    or "redis://localhost:6379/0"
 ).strip()
 
 CELERY_RESULT_BACKEND = (
     os.getenv("CELERY_RESULT_BACKEND")
     or REDIS_URL
+    or "redis://localhost:6379/0"
 ).strip()
 
 if CELERY_BROKER_URL.startswith("rediss://"):
@@ -336,6 +339,7 @@ CELERY_TASK_SOFT_TIME_LIMIT = int(
 CELERY_TASK_TIME_LIMIT = int(
     os.getenv("CELERY_TASK_TIME_LIMIT", "480")
 )
+
 
 
 # ------------------------------------------------------------------------------
